@@ -1,70 +1,75 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Round Robin</title>
-    <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 16px; }
-      .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-      input, button { padding: 10px; font-size: 14px; }
-      button { cursor: pointer; }
-      .box { border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-top: 12px; }
-      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-      .match { border: 1px solid #ddd; border-radius: 10px; padding: 12px; }
-      .muted { color: #666; font-size: 13px; }
-      .timer { font-size: 28px; font-weight: 700; }
-      .bye { background: #fafafa; }
-      .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#f2f2f2; font-size:12px; }
-    </style>
+    <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
-    <h1>Round Robin</h1>
+    <div class="container">
+      <!-- A) Header bar -->
+      <header class="header">
+        <h1 class="header-title">Round Robin</h1>
+        <div class="header-center">
+          <span id="roundHeader" class="round-header">—</span>
+        </div>
+        <div class="header-actions">
+          <button id="startRound" class="btn btn-primary">Generate Next Round</button>
+          <button id="reset" class="btn btn-secondary">Reset</button>
+        </div>
+      </header>
 
-    <div class="box">
-      <div class="row">
-        <label>
-          Courts (max 6):
-          <input id="courts" type="number" min="1" max="6" value="6" />
-        </label>
+      <!-- B) Hero timer panel -->
+      <section class="hero-timer">
+        <div class="timer-display" id="timer">11:00</div>
+        <div class="timer-actions">
+          <button id="timerStart" class="btn btn-pill start">Start</button>
+          <button id="timerPause" class="btn btn-pill pause">Pause</button>
+          <button id="timerReset" class="btn btn-secondary">Reset Timer</button>
+        </div>
+        <button type="button" id="settingsToggle" class="settings-toggle" aria-expanded="false">⚙ Settings</button>
+        <div id="settingsPanel" class="settings-panel" aria-hidden="true">
+          <label>
+            Round minutes
+            <input id="minutes" type="number" min="5" max="60" value="11" />
+          </label>
+          <label>
+            Courts
+            <input id="courts" type="number" min="1" max="6" value="6" />
+          </label>
+        </div>
+        <div id="diagnostics" class="diagnostics"></div>
+      </section>
 
-        <label>
-          Round minutes:
-          <input id="minutes" type="number" min="5" max="60" value="11" />
-        </label>
+      <!-- C) Main content: 2-column layout -->
+      <main class="main-content">
+        <!-- Left column: Courts -->
+        <section class="courts-section">
+          <h3 id="roundHeaderCourts" class="round-header">Round —</h3>
+          <div id="matches" class="courts-grid"></div>
+        </section>
 
-        <button id="startRound">Generate Next Round</button>
-        <button id="reset">Reset</button>
-      </div>
-
-      <div class="row" style="margin-top:10px;">
-        <div class="timer" id="timer">11:00</div>
-        <button id="timerStart">Start</button>
-        <button id="timerPause">Pause</button>
-        <button id="timerReset">Reset Timer</button>
-      </div>
-
-      <div class="muted" id="diagnostics"></div>
-    </div>
-
-    <div class="box">
-      <h3>Players (add/drop any time)</h3>
-      <div class="row">
-        <input id="playerName" placeholder="Add player name" />
-        <button id="addPlayer">Add</button>
-      </div>
-      <div id="playersList" class="box"></div>
-    </div>
-
-    <div class="box">
-      <h3>Current Round</h3>
-      <div id="byes" class="box bye"></div>
-      <div id="matches" class="grid"></div>
-    </div>
-
-    <div class="box">
-      <h3>Leaderboard</h3>
-      <div id="leaderboard"></div>
+        <!-- Right column: Bench, Players, Leaderboard -->
+        <aside class="sidebar">
+          <div class="panel">
+            <h3>Bench</h3>
+            <div id="byes" class="bench-pills"></div>
+          </div>
+          <div class="panel">
+            <h3>Players</h3>
+            <div class="players-add">
+              <input id="playerName" type="text" placeholder="Add player name" />
+              <button id="addPlayer" class="btn btn-primary">Add</button>
+            </div>
+            <div id="playersList" class="players-list"></div>
+          </div>
+          <div class="panel">
+            <h3>Leaderboard</h3>
+            <div id="leaderboard" class="leaderboard-list"></div>
+          </div>
+        </aside>
+      </main>
     </div>
 
     <script src="./js/roundrobin.js"></script>
