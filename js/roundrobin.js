@@ -610,18 +610,18 @@
 
   const MODES = {
     random: generateRandomRound,
-    throne: generateThroneRound,
-    upDownRiver: generateUpDownRiverRound,
-    gauntlet: generateGauntletRound,
-    cream: generateCreamRound,
+    // throne: generateThroneRound,
+    // upDownRiver: generateUpDownRiverRound,
+    // gauntlet: generateGauntletRound,
+    // cream: generateCreamRound,
   };
 
   const APPLY_RESULTS = {
     random: noop,
-    throne: applyThroneResults,
-    upDownRiver: applyUpDownRiverResults,
-    gauntlet: applyGauntletResults,
-    cream: applyCreamResults,
+    // throne: applyThroneResults,
+    // upDownRiver: applyUpDownRiverResults,
+    // gauntlet: applyGauntletResults,
+    // cream: applyCreamResults,
   };
 
   return {

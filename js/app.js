@@ -77,7 +77,10 @@ function loadState() {
   try {
     const fmt = localStorage.getItem(STORAGE_KEYS.format);
     const formatEl = $("formatSelect");
-    if (formatEl && fmt) formatEl.value = fmt;
+    if (formatEl) {
+      formatEl.value = "random";
+      if (fmt !== "random") try { localStorage.setItem(STORAGE_KEYS.format, "random"); } catch (_) {}
+    }
   } catch (_) {}
   updateFormatDescription();
 }
