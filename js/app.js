@@ -27,7 +27,10 @@ function ensureScore(pid) {
 function loadState() {
   try {
     const p = localStorage.getItem(STORAGE_KEYS.players);
-    if (p) players = JSON.parse(p);
+    if (p) {
+      players = JSON.parse(p);
+      players.forEach((p) => { if (p.onBench === undefined) p.onBench = false; });
+    }
   } catch (_) {}
   try {
     const s = localStorage.getItem(STORAGE_KEYS.scores);
@@ -123,20 +126,24 @@ function renderPlayers() {
 
   box.innerHTML = players
     .map(
-      (p, idx) => `
+      (p, idx) => {
+        const benchBtn = p.isActive && !p.onBench ? "Bench" : p.onBench ? "Back in" : null;
+        return `
     <div class="player-row" data-idx="${idx}">
       <div class="player-info">
         <span class="player-name">${escapeHtml(p.name)}</span>
         <span class="player-badges">
-          <span class="player-badge ${p.isActive ? "active" : ""}">${p.isActive ? "active" : "inactive"}</span>
+          <span class="player-badge ${p.isActive ? "active" : ""}">${p.isActive ? (p.onBench ? "on bench" : "active") : "inactive"}</span>
         </span>
       </div>
       <div class="player-actions">
+        ${benchBtn ? `<button class="btn btn-secondary" data-t="bench" data-i="${idx}">${benchBtn}</button>` : ""}
         <button class="btn btn-secondary" data-t="toggle" data-i="${idx}">${p.isActive ? "Drop" : "Add back"}</button>
         <button class="btn btn-secondary" data-t="remove" data-i="${idx}">Remove</button>
       </div>
     </div>
-  `
+  `;
+      }
     )
     .join("");
 
@@ -144,10 +151,15 @@ function renderPlayers() {
     btn.onclick = () => {
       const idx = Number(btn.dataset.i);
       const t = btn.dataset.t;
-      if (t === "toggle") players[idx].isActive = !players[idx].isActive;
+      if (t === "toggle") {
+        players[idx].isActive = !players[idx].isActive;
+        if (!players[idx].isActive) players[idx].onBench = false;
+      }
+      if (t === "bench") players[idx].onBench = !players[idx].onBench;
       if (t === "remove") players.splice(idx, 1);
       savePlayers();
       renderPlayers();
+      renderByes();
       renderLeaderboard();
     };
   });
@@ -201,18 +213,31 @@ function renderLeaderboard() {
     .join("");
 }
 
-// ——— Bench (pill chips) ———
+// ——— Bench (pill chips) + Sitting out ———
 function renderByes() {
   const el = $("byes");
   if (!el) return;
   const byes = currentRoundResult ? currentRoundResult.byePlayers || [] : [];
   if (byes.length === 0) {
     el.innerHTML = `<span class="bench-empty">No byes this round.</span>`;
-    return;
+  } else {
+    el.innerHTML = byes
+      .map((p) => `<span class="bench-pill">${escapeHtml(p.name)}</span>`)
+      .join("");
   }
-  el.innerHTML = byes
-    .map((p) => `<span class="bench-pill">${escapeHtml(p.name)}</span>`)
-    .join("");
+
+  const sittingEl = $("sittingOut");
+  if (!sittingEl) return;
+  const sitting = players.filter((p) => p.isActive && p.onBench);
+  if (sitting.length === 0) {
+    sittingEl.innerHTML = "";
+    sittingEl.classList.remove("has-content");
+  } else {
+    sittingEl.classList.add("has-content");
+    sittingEl.innerHTML =
+      `<span class="bench-sitting-label">Sitting out:</span> ` +
+      sitting.map((p) => `<span class="bench-pill bench-pill-sitting">${escapeHtml(p.name)}</span>`).join("");
+  }
 }
 
 // ——— Court cards: win/lose/lock + undo ———
@@ -413,20 +438,41 @@ function updateTimerDisplay() {
     if (countdownEl) countdownEl.textContent = `Starting in ${countdownSecondsRemaining}…`;
     const m = Math.floor(roundSecondsRemaining / 60);
     const s = roundSecondsRemaining % 60;
-    timerEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    const timeStr = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    timerEl.textContent = timeStr;
+    const overlayDisplay = $("timerOverlayDisplay");
+    const overlayCountdown = $("timerOverlayCountdown");
+    if (overlayDisplay) overlayDisplay.textContent = timeStr;
+    if (overlayCountdown) overlayCountdown.textContent = `Starting in ${countdownSecondsRemaining}…`;
     return;
   }
   if (countdownEl) countdownEl.textContent = "";
 
   const m = Math.floor(roundSecondsRemaining / 60);
   const s = roundSecondsRemaining % 60;
-  timerEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  const timeStr = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  timerEl.textContent = timeStr;
 
   if (timerMode === "running") {
     timerEl.classList.add("running");
     if (roundSecondsRemaining <= DANGER_THRESHOLD_SEC) {
       timerEl.classList.add("danger");
     }
+  }
+
+  // Sync overlay
+  const overlayDisplay = $("timerOverlayDisplay");
+  const overlayCountdown = $("timerOverlayCountdown");
+  const overlayStatus = $("timerOverlayStatus");
+  if (overlayDisplay) {
+    overlayDisplay.textContent = timeStr;
+    overlayDisplay.classList.toggle("danger", timerMode === "running" && roundSecondsRemaining <= DANGER_THRESHOLD_SEC);
+  }
+  if (overlayCountdown) {
+    overlayCountdown.textContent = timerMode === "countdown" ? `Starting in ${countdownSecondsRemaining}…` : "";
+  }
+  if (overlayStatus) {
+    overlayStatus.textContent = timerMode === "stopped" ? "Round ended early" : "";
   }
 }
 
@@ -435,10 +481,21 @@ function updateTimerButtonStates() {
   const pauseBtn = $("timerPause");
   const stopBtn = $("timerStop");
   const resetBtn = $("timerReset");
-  if (startBtn) startBtn.disabled = !(timerMode === "idle" || timerMode === "paused" || timerMode === "stopped" || timerMode === "countdown");
-  if (pauseBtn) pauseBtn.disabled = timerMode !== "running";
-  if (stopBtn) stopBtn.disabled = !(timerMode === "running" || timerMode === "countdown");
+  const startEnabled = timerMode === "idle" || timerMode === "paused" || timerMode === "stopped" || timerMode === "countdown";
+  const pauseEnabled = timerMode === "running";
+  const stopEnabled = timerMode === "running" || timerMode === "countdown";
+  if (startBtn) startBtn.disabled = !startEnabled;
+  if (pauseBtn) pauseBtn.disabled = !pauseEnabled;
+  if (stopBtn) stopBtn.disabled = !stopEnabled;
   if (resetBtn) resetBtn.disabled = false;
+
+  // Overlay buttons
+  const overlayStart = $("timerOverlayStart");
+  const overlayPause = $("timerOverlayPause");
+  const overlayStop = $("timerOverlayStop");
+  if (overlayStart) overlayStart.disabled = !startEnabled;
+  if (overlayPause) overlayPause.disabled = !pauseEnabled;
+  if (overlayStop) overlayStop.disabled = !stopEnabled;
 }
 
 function renderTimer() {
@@ -521,7 +578,7 @@ function doAddPlayer() {
     $("playerName").value = "";
     return;
   }
-  players.push({ id, name, isActive: true });
+  players.push({ id, name, isActive: true, onBench: false });
   ensureScore(id);
   $("playerName").value = "";
   savePlayers();
@@ -545,12 +602,12 @@ if (playerNameInput) {
 }
 
 $("startRound").onclick = () => {
-  const active = players.filter((p) => p.isActive);
+  const active = players.filter((p) => p.isActive && !p.onBench);
   const courtsEl = $("courts");
   const courts = courtsEl ? Number(courtsEl.value) || 6 : 6;
 
   if (active.length < 4) {
-    alert("Need at least 4 active players.");
+    alert("Need at least 4 active players (not on bench).");
     return;
   }
 
@@ -571,24 +628,31 @@ $("startRound").onclick = () => {
 };
 
 $("reset").onclick = () => {
-  if (!confirm("Reset event state (histories + scores)?")) return;
+  if (!confirm("Full reset: clear all players, scores, state, and settings. Continue?")) return;
+  const keys = ["rr_players", "rr_scores", "rr_state", "rr_settings", "rr_settings_collapsed"];
+  keys.forEach((k) => localStorage.removeItem(k));
   state = null;
+  players = [];
   scores = {};
   currentRoundResult = null;
   currentRoundDecisions = {};
-  players.forEach((p) => ensureScore(p.id));
-  try {
-    localStorage.removeItem(STORAGE_KEYS.state);
-    localStorage.setItem(STORAGE_KEYS.scores, JSON.stringify(scores));
-  } catch (_) {}
+  const minEl = $("minutes");
+  const courtEl = $("courts");
+  const countdownEl = $("startCountdown");
+  if (minEl) minEl.value = "11";
+  if (courtEl) courtEl.value = "6";
+  if (countdownEl) countdownEl.value = "30";
   const matchesEl = $("matches");
   if (matchesEl) matchesEl.innerHTML = "";
   renderByes();
   updateRoundHeader(null);
   const diag = $("diagnostics");
   if (diag) diag.textContent = "";
+  renderPlayers();
   renderLeaderboard();
+  roundSecondsRemaining = 11 * 60;
   timerReset();
+  closeTimerOverlay();
 };
 
 $("timerStart").onclick = timerStart;
@@ -597,6 +661,50 @@ $("timerStop").onclick = timerStop;
 $("timerReset").onclick = () => {
   timerReset();
 };
+
+// ——— Timer focus overlay ———
+function openTimerOverlay() {
+  const overlay = $("timerOverlay");
+  if (!overlay) return;
+  overlay.classList.remove("hidden");
+  overlay.setAttribute("aria-hidden", "false");
+  updateTimerDisplay();
+  updateTimerButtonStates();
+}
+
+function closeTimerOverlay() {
+  const overlay = $("timerOverlay");
+  if (!overlay) return;
+  overlay.classList.add("hidden");
+  overlay.setAttribute("aria-hidden", "true");
+}
+
+$("timerFocus").onclick = () => {
+  const overlay = $("timerOverlay");
+  if (!overlay) return;
+  if (overlay.classList.contains("hidden")) {
+    openTimerOverlay();
+  } else {
+    closeTimerOverlay();
+  }
+};
+
+$("timerOverlayExit").onclick = closeTimerOverlay;
+
+const overlayStart = $("timerOverlayStart");
+const overlayPause = $("timerOverlayPause");
+const overlayStop = $("timerOverlayStop");
+if (overlayStart) overlayStart.onclick = timerStart;
+if (overlayPause) overlayPause.onclick = timerPause;
+if (overlayStop) overlayStop.onclick = timerStop;
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  const overlay = $("timerOverlay");
+  if (overlay && !overlay.classList.contains("hidden")) {
+    closeTimerOverlay();
+  }
+});
 
 // Persist settings when inputs change
 const minEl = $("minutes");

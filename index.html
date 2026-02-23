@@ -15,7 +15,6 @@
           <span id="roundHeader" class="round-header">—</span>
         </div>
         <div class="header-actions">
-          <button id="startRound" class="btn btn-primary">Generate Next Round</button>
           <button id="reset" class="btn btn-secondary">Reset</button>
         </div>
       </header>
@@ -32,6 +31,7 @@
         </div>
         <div id="timerStatus" class="timer-status"></div>
         <button type="button" id="settingsToggle" class="settings-toggle" aria-expanded="false">⚙ Settings</button>
+        <button type="button" id="timerFocus" class="settings-toggle">Focus</button>
         <div id="settingsPanel" class="settings-panel" aria-hidden="true">
           <label>
             Round minutes
@@ -53,7 +53,10 @@
       <main class="main-content">
         <!-- Left column: Courts -->
         <section class="courts-section">
-          <h3 id="roundHeaderCourts" class="round-header">Round —</h3>
+          <div class="courts-section-header">
+            <h3 id="roundHeaderCourts" class="round-header">Round —</h3>
+            <button id="startRound" class="btn btn-primary">Generate Next Round</button>
+          </div>
           <div id="matches" class="courts-grid"></div>
         </section>
 
@@ -62,6 +65,7 @@
           <div class="panel">
             <h3>Bench</h3>
             <div id="byes" class="bench-pills"></div>
+            <div id="sittingOut" class="bench-sitting-out"></div>
           </div>
           <div class="panel">
             <h3>Players</h3>
@@ -77,6 +81,21 @@
           </div>
         </aside>
       </main>
+    </div>
+
+    <!-- Timer focus overlay (full-screen) -->
+    <div id="timerOverlay" class="timer-overlay hidden" aria-hidden="true">
+      <div class="timer-overlay-content">
+        <div class="timer-overlay-display" id="timerOverlayDisplay">11:00</div>
+        <div class="timer-overlay-countdown" id="timerOverlayCountdown"></div>
+        <div class="timer-overlay-status" id="timerOverlayStatus"></div>
+        <div class="timer-overlay-actions">
+          <button type="button" id="timerOverlayStart" class="btn btn-pill start">Start</button>
+          <button type="button" id="timerOverlayPause" class="btn btn-pill pause">Pause</button>
+          <button type="button" id="timerOverlayStop" class="btn btn-pill stop">Stop</button>
+        </div>
+        <button type="button" id="timerOverlayExit" class="btn btn-secondary timer-overlay-exit">Exit</button>
+      </div>
     </div>
 
     <script src="./js/roundrobin.js"></script>
