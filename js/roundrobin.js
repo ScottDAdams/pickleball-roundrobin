@@ -48,16 +48,17 @@
 
   function initState(state) {
     state = state || {};
+    const mode = state.mode || "random";
     return {
       round: state.round || 0,
-      // partnerHistory: { "a|b": count }
+      mode,
+      formatState: state.formatState || {},
       partnerHistory: state.partnerHistory || {},
-      // matchHistory: { "teamA||teamB": count }
       matchHistory: state.matchHistory || {},
-      // byeCounts: { playerId: number }
       byeCounts: state.byeCounts || {},
-      // lastCourt: { playerId: lastCourtNumber }
       lastCourt: state.lastCourt || {},
+      ratings: state.ratings || {},
+      lastRound: state.lastRound || null,
     };
   }
 
@@ -66,6 +67,7 @@
       const id = p.id;
       if (state.byeCounts[id] == null) state.byeCounts[id] = 0;
       if (state.lastCourt[id] == null) state.lastCourt[id] = 0;
+      if (state.ratings[id] == null) state.ratings[id] = 1000;
     });
   }
 
@@ -330,20 +332,239 @@
     });
   }
 
+  function toDisplayAssignments(assigned) {
+    return assigned.map((a) => ({
+      court: a.court,
+      team1: `${a.team1[0].name} & ${a.team1[1].name}`,
+      team2: `${a.team2[0].name} & ${a.team2[1].name}`,
+      team1Ids: [a.team1[0].id, a.team1[1].id],
+      team2Ids: [a.team2[0].id, a.team2[1].id],
+    }));
+  }
+
+  // ——— MODE: random (popcorn-style) ———
+  function generateRandomRound(active, courtCount, state, opts) {
+    const partnerRes = makePartnerPairs(active, state, opts);
+    if (partnerRes.impossible) return { impossible: true, reason: "Could not build partner pairs" };
+    const matchRes = makeMatchesFromPairs(partnerRes.pairs, courtCount, state, opts);
+    if (matchRes.impossible) return { impossible: true, reason: "Could not build matches" };
+    const assigned = assignCourts(matchRes.matches, state);
+    commitHistories(assigned, state);
+    return {
+      assignments: toDisplayAssignments(assigned),
+      assignmentsRaw: assigned,
+      diagnostics: {
+        repeatPartnershipsUsed: partnerRes.repeatPartnershipsUsed,
+        repeatMatchupsUsed: matchRes.repeatMatchupsUsed,
+      },
+    };
+  }
+
+  function generateThroneRound(active, courtCount, state, opts) {
+    if (!state.formatState.throne) state.formatState.throne = {};
+    const t = state.formatState.throne;
+    if (!t.courtRanks) t.courtRanks = {};
+    if (!t.lastCourtTeams) t.lastCourtTeams = [];
+    const courtRanks = t.courtRanks;
+    active.forEach((p) => { if (courtRanks[p.id] == null) courtRanks[p.id] = courtCount + 1; });
+    const lastRound = state.lastRound;
+    const hasResults = lastRound && lastRound.assignments && lastRound.courtCount === courtCount;
+
+    if (!hasResults && Object.keys(courtRanks).length <= active.length) {
+      const shuffled = shuffle(active);
+      shuffled.forEach((p, i) => { courtRanks[p.id] = Math.min(courtCount, Math.floor(i / 4) + 1); });
+    }
+
+    const withRank = active.map((p) => ({ p, rank: courtRanks[p.id] ?? courtCount + 1, r: Math.random() }));
+    withRank.sort((a, b) => (a.rank !== b.rank ? a.rank - b.rank : a.r - b.r));
+    const byCourt = {};
+    for (let c = 1; c <= courtCount; c++) byCourt[c] = [];
+    withRank.forEach(({ p }, i) => {
+      const c = Math.min(courtCount, Math.floor(i / 4) + 1);
+      byCourt[c].push(p);
+    });
+    for (let c = 1; c <= courtCount; c++) if (byCourt[c]) byCourt[c] = shuffle(byCourt[c]);
+
+    const assignments = [];
+    for (let c = 1; c <= courtCount; c++) {
+      const four = byCourt[c] || [];
+      if (four.length !== 4) continue;
+      const pairRes = makePartnerPairs(four, state, opts);
+      if (pairRes.impossible) return { impossible: true, reason: "Could not pair court " + c };
+      const pairs = pairRes.pairs;
+      const team1 = pairs[0], team2 = pairs[1];
+      assignments.push({
+        court: c,
+        team1,
+        team2,
+        team1Key: pairKey(team1[0].id, team1[1].id),
+        team2Key: pairKey(team2[0].id, team2[1].id),
+        matchKey: "",
+      });
+      [team1[0], team1[1], team2[0], team2[1]].forEach((p) => { state.lastCourt[p.id] = c; });
+    }
+    t.lastCourtTeams = assignments.map((a) => ({ court: a.court, team1Ids: [a.team1[0].id, a.team1[1].id], team2Ids: [a.team2[0].id, a.team2[1].id] }));
+    return {
+      assignments: toDisplayAssignments(assignments),
+      diagnostics: hasResults ? {} : { message: "No results for prior round; ranks unchanged." },
+    };
+  }
+
+  function applyThroneResults(state, decisions) {
+    const t = state.formatState.throne;
+    if (!t || !t.courtRanks) return;
+    const courtCount = (state.lastRound && state.lastRound.courtCount) || 6;
+    decisions.forEach((d) => {
+      const winnerIds = d.winnerTeam === 1 ? d.team1Ids : d.team2Ids;
+      const loserIds = d.winnerTeam === 1 ? d.team2Ids : d.team1Ids;
+      winnerIds.forEach((id) => { t.courtRanks[id] = Math.max(1, (t.courtRanks[id] ?? courtCount + 1) - 1); });
+      loserIds.forEach((id) => { t.courtRanks[id] = Math.min(courtCount, (t.courtRanks[id] ?? 1) + 1); });
+    });
+  }
+
+  function generateUpDownRiverRound(active, courtCount, state, opts) {
+    if (!state.formatState.upDownRiver) state.formatState.upDownRiver = {};
+    const r = state.formatState.upDownRiver;
+    if (!r.courtLineup) r.courtLineup = {};
+    const lastRound = state.lastRound;
+    const hasResults = lastRound && lastRound.assignments && lastRound.courtCount === courtCount;
+    if (!hasResults || Object.keys(r.courtLineup).length === 0) {
+      const shuffled = shuffle(active);
+      const byCourt = {};
+      for (let c = 1; c <= courtCount; c++) byCourt[c] = [];
+      shuffled.forEach((p, i) => {
+        const c = Math.min(courtCount, Math.floor(i / 4) + 1);
+        byCourt[c].push(p);
+      });
+      for (let c = 1; c <= courtCount; c++) if (byCourt[c].length === 4) r.courtLineup[c] = byCourt[c].map((p) => p.id);
+    }
+    const assignments = [];
+    for (let c = 1; c <= courtCount; c++) {
+      const ids = r.courtLineup[c] || [];
+      const four = ids.map((id) => active.find((p) => p.id === id)).filter(Boolean);
+      if (four.length !== 4) continue;
+      const pairRes = makePartnerPairs(four, state, opts);
+      if (pairRes.impossible) return { impossible: true, reason: "Could not pair court " + c };
+      const [team1, team2] = [pairRes.pairs[0], pairRes.pairs[1]];
+      assignments.push({ court: c, team1, team2, team1Key: pairKey(team1[0].id, team1[1].id), team2Key: pairKey(team2[0].id, team2[1].id), matchKey: "" });
+      [team1[0], team1[1], team2[0], team2[1]].forEach((p) => { state.lastCourt[p.id] = c; });
+    }
+    r.lastCourtTeams = assignments.map((a) => ({ court: a.court, team1Ids: [a.team1[0].id, a.team1[1].id], team2Ids: [a.team2[0].id, a.team2[1].id] }));
+    return { assignments: toDisplayAssignments(assignments), diagnostics: {} };
+  }
+
+  function applyUpDownRiverResults(state, decisions) {
+    const r = state.formatState.upDownRiver;
+    if (!r || !r.courtLineup) return;
+    const courtCount = (state.lastRound && state.lastRound.courtCount) || 6;
+    const lineup = r.courtLineup;
+    const byCourt = {};
+    decisions.forEach((d) => {
+      const winnerIds = d.winnerTeam === 1 ? d.team1Ids : d.team2Ids;
+      const loserIds = d.winnerTeam === 1 ? d.team2Ids : d.team1Ids;
+      byCourt[d.court] = { winnerIds: winnerIds.slice(), loserIds: loserIds.slice() };
+    });
+    const newLineup = {};
+    for (let c = 1; c <= courtCount; c++) newLineup[c] = (lineup[c] || []).slice();
+    for (let court = 2; court <= courtCount; court++) {
+      const curr = byCourt[court];
+      const above = byCourt[court - 1];
+      if (!curr || !above) continue;
+      newLineup[court - 1] = [...curr.winnerIds, ...above.loserIds];
+      newLineup[court] = [...curr.loserIds, ...above.winnerIds];
+    }
+    r.courtLineup = newLineup;
+  }
+
+  const ELO_K = 24;
+  function balancedTeamsOfFour(four, state) {
+    const getR = (p) => state.ratings[p.id] || 1000;
+    let best = null;
+    const ind = [0, 1, 2, 3];
+    for (const [i, j] of [[0, 1], [0, 2], [0, 3]]) {
+      const k = ind.filter((x) => x !== i && x !== j);
+      const sum1 = getR(four[i]) + getR(four[j]);
+      const sum2 = getR(four[k[0]]) + getR(four[k[1]]);
+      const diff = Math.abs(sum1 - sum2);
+      if (best === null || diff < best.diff) best = { diff, team1: [four[i], four[j]], team2: [four[k[0]], four[k[1]]] };
+    }
+    return best ? [best.team1, best.team2] : null;
+  }
+
+  function generateGauntletRound(active, courtCount, state, opts) {
+    active.forEach((p) => { if (state.ratings[p.id] == null) state.ratings[p.id] = 1000; });
+    const withRating = active.map((p) => ({ p, r: state.ratings[p.id] || 1000 })).sort((a, b) => b.r - a.r);
+    const byCourt = {};
+    for (let c = 1; c <= courtCount; c++) byCourt[c] = [];
+    withRating.forEach((x, i) => { const c = Math.floor(i / 4) + 1; if (c <= courtCount) byCourt[c].push(x.p); });
+    const assignments = [];
+    for (let c = 1; c <= courtCount; c++) {
+      const four = byCourt[c];
+      if (four.length !== 4) continue;
+      const teams = balancedTeamsOfFour(four, state);
+      if (!teams) continue;
+      const [team1, team2] = teams;
+      assignments.push({ court: c, team1, team2, team1Key: pairKey(team1[0].id, team1[1].id), team2Key: pairKey(team2[0].id, team2[1].id), matchKey: "" });
+      [team1[0], team1[1], team2[0], team2[1]].forEach((p) => { state.lastCourt[p.id] = c; });
+    }
+    return { assignments: toDisplayAssignments(assignments), diagnostics: {} };
+  }
+
+  function applyGauntletResults(state, decisions) {
+    decisions.forEach((d) => {
+      const winnerIds = d.winnerTeam === 1 ? d.team1Ids : d.team2Ids;
+      const loserIds = d.winnerTeam === 1 ? d.team2Ids : d.team1Ids;
+      winnerIds.forEach((id) => { state.ratings[id] = (state.ratings[id] || 1000) + ELO_K; });
+      loserIds.forEach((id) => { state.ratings[id] = Math.max(0, (state.ratings[id] || 1000) - ELO_K); });
+    });
+  }
+
+  function generateCreamRound(active, courtCount, state, opts) {
+    return generateGauntletRound(active, courtCount, state, opts);
+  }
+
+  function applyCreamResults(state, decisions) {
+    const courtCount = (state.lastRound && state.lastRound.courtCount) || 6;
+    decisions.forEach((d) => {
+      const court = d.court;
+      const winnerIds = d.winnerTeam === 1 ? d.team1Ids : d.team2Ids;
+      const loserIds = d.winnerTeam === 1 ? d.team2Ids : d.team1Ids;
+      const bump = court === 1 ? 8 : court >= courtCount ? 32 : 24;
+      const drop = court === 1 ? 24 : court >= courtCount ? 8 : 16;
+      winnerIds.forEach((id) => { state.ratings[id] = (state.ratings[id] || 1000) + bump; });
+      loserIds.forEach((id) => { state.ratings[id] = Math.max(0, (state.ratings[id] || 1000) - drop); });
+    });
+  }
+
   // Public API
   function generateRound(playersInput, courtCountInput, stateInput, opts) {
-    opts = opts || {};
-    const state = initState(stateInput);
+    let mode = "random";
+    let playersArg = playersInput;
+    let courtsArg = courtCountInput;
+    let stateArg = stateInput;
+    let optsArg = opts;
+    if (
+      arguments.length >= 1 &&
+      typeof arguments[0] === "object" &&
+      arguments[0] != null &&
+      "players" in arguments[0]
+    ) {
+      const arg = arguments[0];
+      mode = arg.mode || "random";
+      playersArg = arg.players;
+      courtsArg = arg.courts;
+      stateArg = arg.state;
+      optsArg = arg.opts || {};
+    }
+    optsArg = optsArg || {};
+    const state = initState(stateArg);
+    state.mode = mode;
 
-    const courtCount = Math.max(1, Math.min(6, Number(courtCountInput || 6)));
+    const courtCount = Math.max(1, Math.min(6, Number(courtsArg || 6)));
     const capacity = courtCount * 4;
-
-    // normalize players
-    const players = playersInput
+    const players = playersArg
       .map((p) => ({ id: normalizeId(p), name: normalizeName(p) }))
       .filter((p) => p.id.length > 0);
-
-    // de-dupe by id
     const seen = new Set();
     const deduped = [];
     players.forEach((p) => {
@@ -351,28 +572,19 @@
       seen.add(p.id);
       deduped.push(p);
     });
-
     ensurePlayersInState(deduped, state);
-
     const { active, byes } = pickByesFair(deduped, capacity, state);
-
     if (active.length % 2 !== 0) {
-      // This should only happen if something is weird like capacity forcing odd active
       return { impossible: true, reason: "Odd number of active players" };
     }
 
-    const partnerRes = makePartnerPairs(active, state, opts);
-    if (partnerRes.impossible) return { impossible: true, reason: "Could not build partner pairs" };
-
-    const matchRes = makeMatchesFromPairs(partnerRes.pairs, courtCount, state, opts);
-    if (matchRes.impossible) return { impossible: true, reason: "Could not build matches" };
-
-    const assigned = assignCourts(matchRes.matches, state);
-
-    // commit histories
-    commitHistories(assigned, state);
+    const modeFn = MODES[mode];
+    if (!modeFn) return { impossible: true, reason: "Unknown mode: " + mode };
+    const result = modeFn(active, courtCount, state, optsArg);
+    if (result.impossible) return result;
 
     state.round = (state.round || 0) + 1;
+    state.lastRound = { courtCount, assignments: result.assignments };
 
     return {
       round: state.round,
@@ -381,24 +593,40 @@
       playersTotal: deduped.length,
       activePlayers: active,
       byePlayers: byes,
-      assignments: assigned.map((a) => ({
-        court: a.court,
-        team1: `${a.team1[0].name} & ${a.team1[1].name}`,
-        team2: `${a.team2[0].name} & ${a.team2[1].name}`,
-        // keep ids around for scoring
-        team1Ids: [a.team1[0].id, a.team1[1].id],
-        team2Ids: [a.team2[0].id, a.team2[1].id],
-      })),
-      diagnostics: {
-        repeatPartnershipsUsed: partnerRes.repeatPartnershipsUsed,
-        repeatMatchupsUsed: matchRes.repeatMatchupsUsed,
-      },
+      assignments: result.assignments,
+      diagnostics: result.diagnostics || {},
       state,
     };
   }
 
+  function applyResults(state, roundResultDecisions) {
+    if (!state || !roundResultDecisions || roundResultDecisions.length === 0) return;
+    const mode = state.mode || "random";
+    const fn = APPLY_RESULTS[mode];
+    if (fn) fn(state, roundResultDecisions);
+  }
+
+  function noop() {}
+
+  const MODES = {
+    random: generateRandomRound,
+    throne: generateThroneRound,
+    upDownRiver: generateUpDownRiverRound,
+    gauntlet: generateGauntletRound,
+    cream: generateCreamRound,
+  };
+
+  const APPLY_RESULTS = {
+    random: noop,
+    throne: applyThroneResults,
+    upDownRiver: applyUpDownRiverResults,
+    gauntlet: applyGauntletResults,
+    cream: applyCreamResults,
+  };
+
   return {
     generateRound,
+    applyResults,
     pairKey,
     matchKey,
   };

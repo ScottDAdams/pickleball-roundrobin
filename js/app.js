@@ -17,6 +17,7 @@ const STORAGE_KEYS = {
   state: "rr_state",
   settings: "rr_settings",
   headToHead: "rr_headToHead",
+  format: "rr_format",
 };
 
 function uid(name) {
@@ -60,6 +61,11 @@ function loadState() {
       if (countdownEl && o.startCountdown != null) countdownEl.value = o.startCountdown;
     }
   } catch (_) {}
+  try {
+    const fmt = localStorage.getItem(STORAGE_KEYS.format);
+    const formatEl = $("formatSelect");
+    if (formatEl && fmt) formatEl.value = fmt;
+  } catch (_) {}
 }
 
 function savePlayers() {
@@ -99,6 +105,13 @@ function saveSettings() {
         startCountdown: countdownEl ? Number(countdownEl.value) || 30 : 30,
       })
     );
+  } catch (_) {}
+}
+
+function saveFormat() {
+  try {
+    const formatEl = $("formatSelect");
+    if (formatEl) localStorage.setItem(STORAGE_KEYS.format, formatEl.value);
   } catch (_) {}
 }
 
@@ -305,9 +318,12 @@ function renderRound(res) {
 
   const diagnosticsEl = $("diagnostics");
   if (diagnosticsEl) {
-    diagnosticsEl.textContent =
-      `Repeat partners: ${res.diagnostics.repeatPartnershipsUsed} • ` +
-      `Repeat matchups: ${res.diagnostics.repeatMatchupsUsed}`;
+    const msg = res.diagnostics.message;
+    const parts = [];
+    if (res.diagnostics.repeatPartnershipsUsed != null) parts.push(`Repeat partners: ${res.diagnostics.repeatPartnershipsUsed}`);
+    if (res.diagnostics.repeatMatchupsUsed != null) parts.push(`Repeat matchups: ${res.diagnostics.repeatMatchupsUsed}`);
+    if (msg) parts.push(msg);
+    diagnosticsEl.textContent = parts.join(" • ");
   }
 
   const matchesEl = $("matches");
@@ -835,8 +851,34 @@ $("startRound").onclick = () => {
     scrubCurrentRound();
   }
 
+  if (currentRoundResult && state && typeof ROUNDROBIN.applyResults === "function") {
+    const decisions = [];
+    (currentRoundResult.assignments || []).forEach((m, idx) => {
+      const d = currentRoundDecisions[idx];
+      if (d && d.winner) {
+        decisions.push({
+          court: m.court,
+          team1Ids: m.team1Ids.slice(),
+          team2Ids: m.team2Ids.slice(),
+          winnerTeam: d.winner,
+        });
+      }
+    });
+    if (decisions.length > 0) {
+      ROUNDROBIN.applyResults(state, decisions);
+      saveState();
+    }
+  }
+
   stateBeforeCurrentRound = state ? JSON.parse(JSON.stringify(state)) : null;
-  const res = ROUNDROBIN.generateRound(active, courts, state, { maxRetries: 900 });
+  const mode = ($("formatSelect") && $("formatSelect").value) || "random";
+  const res = ROUNDROBIN.generateRound({
+    mode,
+    players: active,
+    courts,
+    state,
+    opts: { maxRetries: 900 },
+  });
 
   if (res.impossible) {
     alert("Could not generate round: " + (res.reason || "unknown"));
@@ -855,7 +897,7 @@ $("startRound").onclick = () => {
 
 $("reset").onclick = () => {
   if (!confirm("Full reset: clear all players, scores, state, and settings. Continue?")) return;
-  const keys = ["rr_players", "rr_scores", "rr_state", "rr_settings", "rr_settings_collapsed", "rr_headToHead"];
+  const keys = ["rr_players", "rr_scores", "rr_state", "rr_settings", "rr_settings_collapsed", "rr_headToHead", "rr_format"];
   keys.forEach((k) => localStorage.removeItem(k));
   state = null;
   players = [];
@@ -871,6 +913,8 @@ $("reset").onclick = () => {
   if (minEl) minEl.value = "11";
   if (courtEl) courtEl.value = "6";
   if (countdownEl) countdownEl.value = "30";
+  const formatSelectEl = $("formatSelect");
+  if (formatSelectEl) formatSelectEl.value = "random";
   const matchesEl = $("matches");
   if (matchesEl) matchesEl.innerHTML = "";
   renderByes();
@@ -956,9 +1000,11 @@ document.addEventListener("keydown", (e) => {
 const minEl = $("minutes");
 const courtEl = $("courts");
 const startCountdownEl = $("startCountdown");
+const formatEl = $("formatSelect");
 if (minEl) minEl.addEventListener("change", saveSettings);
 if (courtEl) courtEl.addEventListener("change", saveSettings);
 if (startCountdownEl) startCountdownEl.addEventListener("change", saveSettings);
+if (formatEl) formatEl.addEventListener("change", saveFormat);
 
 // ——— Init ———
 loadState();

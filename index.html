@@ -35,6 +35,16 @@
         <button type="button" id="timerFocus" class="settings-toggle">Focus</button>
         <div id="settingsPanel" class="settings-panel" aria-hidden="true">
           <label>
+            Format
+            <select id="formatSelect" aria-label="Game format">
+              <option value="random">Random (popcorn)</option>
+              <option value="throne">Claim the Throne</option>
+              <option value="upDownRiver">Up &amp; Down the River</option>
+              <option value="gauntlet">Gauntlet</option>
+              <option value="cream">Cream of the Crop</option>
+            </select>
+          </label>
+          <label>
             Round minutes
             <input id="minutes" type="number" min="5" max="60" value="11" />
           </label>
