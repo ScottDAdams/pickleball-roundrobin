@@ -15,6 +15,7 @@
           <span id="roundHeader" class="round-header">—</span>
         </div>
         <div class="header-actions">
+          <button id="endEvent" class="btn btn-primary">End event</button>
           <button id="reset" class="btn btn-secondary">Reset</button>
         </div>
       </header>
@@ -95,6 +96,17 @@
           <button type="button" id="timerOverlayStop" class="btn btn-pill stop">End round early</button>
         </div>
         <button type="button" id="timerOverlayExit" class="btn btn-secondary timer-overlay-exit">Exit</button>
+      </div>
+    </div>
+
+    <!-- Celebration overlay (full-screen winner) -->
+    <div id="celebrationOverlay" class="celebration-overlay hidden" aria-hidden="true">
+      <div class="celebration-content">
+        <div class="celebration-trophy" aria-hidden="true">🏆</div>
+        <h2 class="celebration-title">CHAMPION</h2>
+        <p id="celebrationWinnerName" class="celebration-winner"></p>
+        <p id="celebrationRationale" class="celebration-rationale"></p>
+        <button type="button" id="celebrationClose" class="btn btn-primary celebration-close">Close</button>
       </div>
     </div>
 

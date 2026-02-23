@@ -797,3 +797,71 @@ body {
   color: var(--accentCoolLight);
   box-shadow: var(--glow-cool);
 }
+
+/* —— Celebration overlay (full-screen winner) —— */
+.celebration-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: linear-gradient(
+    135deg,
+    #0f0a1a 0%,
+    #1a0a2e 25%,
+    #0d1b2a 50%,
+    #1b263b 75%,
+    #0f0a1a 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s ease;
+}
+
+.celebration-overlay.hidden {
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.celebration-content {
+  text-align: center;
+  padding: 48px 24px;
+  max-width: 90vw;
+}
+
+.celebration-trophy {
+  font-size: clamp(80px, 20vw, 160px);
+  line-height: 1;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 30px rgba(255, 184, 0, 0.5));
+}
+
+.celebration-title {
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  margin: 0 0 16px;
+  background: linear-gradient(180deg, var(--accentHotLight) 0%, var(--accentHot) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.celebration-winner {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 32px;
+}
+
+.celebration-rationale {
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+  color: var(--muted);
+  max-width: 560px;
+  margin: 0 auto 32px;
+  line-height: 1.5;
+}
+
+.celebration-close {
+  margin-top: 16px;
+}

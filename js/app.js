@@ -9,12 +9,14 @@ let currentRoundResult = null; // last res from generateRound for round # and be
 let currentRoundDecisions = {}; // { matchIdx: { winnerIds, loserIds } } for undo
 let stateBeforeCurrentRound = null; // state snapshot before last generateRound (for scrub)
 let roundTimerWasStarted = false;   // true once countdown or round timer has run (blocks Generate until winners in)
+let headToHead = {};                // headToHead[pid][opponentPid] = times pid's team beat opponent's when they faced
 
 const STORAGE_KEYS = {
   players: "rr_players",
   scores: "rr_scores",
   state: "rr_state",
   settings: "rr_settings",
+  headToHead: "rr_headToHead",
 };
 
 function uid(name) {
@@ -41,6 +43,10 @@ function loadState() {
   try {
     const st = localStorage.getItem(STORAGE_KEYS.state);
     if (st) state = JSON.parse(st);
+  } catch (_) {}
+  try {
+    const h = localStorage.getItem(STORAGE_KEYS.headToHead);
+    if (h) headToHead = JSON.parse(h);
   } catch (_) {}
   try {
     const set = localStorage.getItem(STORAGE_KEYS.settings);
@@ -71,6 +77,12 @@ function saveScores() {
 function saveState() {
   try {
     localStorage.setItem(STORAGE_KEYS.state, state ? JSON.stringify(state) : "");
+  } catch (_) {}
+}
+
+function saveHeadToHead() {
+  try {
+    localStorage.setItem(STORAGE_KEYS.headToHead, JSON.stringify(headToHead));
   } catch (_) {}
 }
 
@@ -360,6 +372,14 @@ function recordWinner(matchIdx, win) {
   currentRoundDecisions[matchIdx] = { winner: win, winnerIds, loserIds };
   saveScores();
 
+  winnerIds.forEach((w) => {
+    loserIds.forEach((l) => {
+      if (!headToHead[w]) headToHead[w] = {};
+      headToHead[w][l] = (headToHead[w][l] || 0) + 1;
+    });
+  });
+  saveHeadToHead();
+
   // Update single card to locked state
   const card = $("matches").querySelector(`.court-card[data-idx="${matchIdx}"]`);
   if (card) {
@@ -402,6 +422,15 @@ function undoCourt(matchIdx) {
   delete currentRoundDecisions[matchIdx];
   saveScores();
 
+  winnerIds.forEach((w) => {
+    loserIds.forEach((l) => {
+      if (headToHead[w] && headToHead[w][l]) {
+        headToHead[w][l] = Math.max(0, headToHead[w][l] - 1);
+      }
+    });
+  });
+  saveHeadToHead();
+
   const card = $("matches").querySelector(`.court-card[data-idx="${matchIdx}"]`);
   if (card) {
     card.classList.remove("locked");
@@ -418,6 +447,83 @@ function undoCourt(matchIdx) {
   }
   renderLeaderboard();
   updateGenerateRoundButton();
+}
+
+// ——— End event: winner + tie-breaker (head-to-head) ———
+function getHeadToHead(a, b) {
+  const ab = (headToHead[a] && headToHead[a][b]) || 0;
+  const ba = (headToHead[b] && headToHead[b][a]) || 0;
+  return { aVsB: ab, bVsA: ba };
+}
+
+function getWinnerWithTieBreaker() {
+  const rows = Object.entries(scores).map(([pid, s]) => {
+    const name = (players.find((p) => p.id === pid) || {}).name || pid;
+    const pct = s.games ? s.wins / s.games : 0;
+    return { pid, name, ...s, pct };
+  });
+  if (rows.length === 0) return { winnerName: null, rationale: null };
+  rows.sort(
+    (a, b) =>
+      b.wins - a.wins ||
+      b.pct - a.pct ||
+      (b.games - a.games) ||
+      a.name.localeCompare(b.name)
+  );
+  const maxWins = rows[0].wins;
+  const tied = rows.filter((r) => r.wins === maxWins);
+  if (tied.length === 1) {
+    return { winnerName: tied[0].name, rationale: null };
+  }
+  tied.sort((a, b) => {
+    const scoreA = tied
+      .filter((t) => t.pid !== a.pid)
+      .reduce((sum, t) => sum + ((headToHead[a.pid] && headToHead[a.pid][t.pid]) || 0), 0);
+    const scoreB = tied
+      .filter((t) => t.pid !== b.pid)
+      .reduce((sum, t) => sum + ((headToHead[b.pid] && headToHead[b.pid][t.pid]) || 0), 0);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return a.name.localeCompare(b.name);
+  });
+  const winnerName = tied[0].name;
+  const rationaleParts = [];
+  for (let i = 0; i < tied.length; i++) {
+    for (let j = i + 1; j < tied.length; j++) {
+      const hab = getHeadToHead(tied[i].pid, tied[j].pid);
+      if (hab.aVsB > 0 || hab.bVsA > 0) {
+        rationaleParts.push(
+          `${tied[i].name} beat ${tied[j].name} ${hab.aVsB}–${hab.bVsA}`
+        );
+      }
+    }
+  }
+  const rationale =
+    rationaleParts.length > 0
+      ? "Tie-breaker (head-to-head when they played each other): " +
+        rationaleParts.join(". ") + "."
+      : null;
+  return { winnerName, rationale };
+}
+
+function openCelebration(winnerName, rationale) {
+  const overlay = $("celebrationOverlay");
+  const nameEl = $("celebrationWinnerName");
+  const rationaleEl = $("celebrationRationale");
+  if (!overlay || !nameEl) return;
+  nameEl.textContent = winnerName;
+  if (rationaleEl) {
+    rationaleEl.textContent = rationale || "";
+    rationaleEl.style.display = rationale ? "block" : "none";
+  }
+  overlay.classList.remove("hidden");
+  overlay.setAttribute("aria-hidden", "false");
+}
+
+function closeCelebration() {
+  const overlay = $("celebrationOverlay");
+  if (!overlay) return;
+  overlay.classList.add("hidden");
+  overlay.setAttribute("aria-hidden", "true");
 }
 
 // ——— Timer state machine ———
@@ -712,7 +818,7 @@ $("startRound").onclick = () => {
 
 $("reset").onclick = () => {
   if (!confirm("Full reset: clear all players, scores, state, and settings. Continue?")) return;
-  const keys = ["rr_players", "rr_scores", "rr_state", "rr_settings", "rr_settings_collapsed"];
+  const keys = ["rr_players", "rr_scores", "rr_state", "rr_settings", "rr_settings_collapsed", "rr_headToHead"];
   keys.forEach((k) => localStorage.removeItem(k));
   state = null;
   players = [];
@@ -721,6 +827,7 @@ $("reset").onclick = () => {
   currentRoundDecisions = {};
   stateBeforeCurrentRound = null;
   roundTimerWasStarted = false;
+  headToHead = {};
   const minEl = $("minutes");
   const courtEl = $("courts");
   const countdownEl = $("startCountdown");
@@ -738,6 +845,7 @@ $("reset").onclick = () => {
   roundSecondsRemaining = 11 * 60;
   timerReset();
   closeTimerOverlay();
+  closeCelebration();
   updateGenerateRoundButton();
 };
 
@@ -748,7 +856,17 @@ $("timerReset").onclick = () => {
   timerReset();
 };
 
-// ——— Timer focus overlay ———
+$("endEvent").onclick = () => {
+  const { winnerName, rationale } = getWinnerWithTieBreaker();
+  if (!winnerName) {
+    alert("No results yet. Play some rounds and record winners first.");
+    return;
+  }
+  openCelebration(winnerName, rationale);
+};
+
+$("celebrationClose").onclick = closeCelebration;
+
 function openTimerOverlay() {
   const overlay = $("timerOverlay");
   if (!overlay) return;
@@ -789,6 +907,11 @@ document.addEventListener("keydown", (e) => {
   const overlay = $("timerOverlay");
   if (overlay && !overlay.classList.contains("hidden")) {
     closeTimerOverlay();
+    return;
+  }
+  const celeb = $("celebrationOverlay");
+  if (celeb && !celeb.classList.contains("hidden")) {
+    closeCelebration();
   }
 });
 
