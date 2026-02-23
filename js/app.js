@@ -8,6 +8,7 @@ let scores = {};
 let currentRoundResult = null; // last res from generateRound for round # and bench
 let currentRoundDecisions = {}; // { matchIdx: { winnerIds, loserIds } } for undo
 let stateBeforeCurrentRound = null; // state snapshot before last generateRound (for scrub)
+let roundTimerWasStarted = false;   // true once countdown or round timer has run (blocks Generate until winners in)
 
 const STORAGE_KEYS = {
   players: "rr_players",
@@ -244,6 +245,7 @@ function scrubCurrentRound() {
   state = stateBeforeCurrentRound;
   currentRoundResult = null;
   currentRoundDecisions = {};
+  roundTimerWasStarted = false;
   const matchesEl = $("matches");
   if (matchesEl) matchesEl.innerHTML = "";
   renderByes();
@@ -251,6 +253,7 @@ function scrubCurrentRound() {
   const diag = $("diagnostics");
   if (diag) diag.textContent = "";
   saveState();
+  updateGenerateRoundButton();
 }
 
 // ——— Bench (pill chips) + Sitting out ———
@@ -334,6 +337,7 @@ function renderRound(res) {
       undoCourt(Number(btn.dataset.idx));
     };
   });
+  updateGenerateRoundButton();
 }
 
 function recordWinner(matchIdx, win) {
@@ -374,6 +378,7 @@ function recordWinner(matchIdx, win) {
     }
   }
   renderLeaderboard();
+  updateGenerateRoundButton();
 }
 
 function undoCourt(matchIdx) {
@@ -412,6 +417,7 @@ function undoCourt(matchIdx) {
     }
   }
   renderLeaderboard();
+  updateGenerateRoundButton();
 }
 
 // ——— Timer state machine ———
@@ -423,6 +429,26 @@ let countdownInterval = null;
 let roundInterval = null;
 
 const DANGER_THRESHOLD_SEC = 90;
+
+function updateGenerateRoundButton() {
+  const btn = $("startRound");
+  if (!btn) return;
+  if (!currentRoundResult) {
+    btn.disabled = false;
+    return;
+  }
+  if (!roundTimerWasStarted) {
+    btn.disabled = false;
+    return;
+  }
+  if (timerMode !== "stopped") {
+    btn.disabled = false;
+    return;
+  }
+  const numMatches = (currentRoundResult.assignments || []).length;
+  const numDecided = Object.keys(currentRoundDecisions).length;
+  btn.disabled = numDecided < numMatches;
+}
 
 function getRoundMinutes() {
   const minEl = $("minutes");
@@ -456,6 +482,10 @@ function setTimerMode(mode) {
   updateTimerDisplay();
   updateTimerButtonStates();
   updateTimerStatus();
+  if (mode === "stopped") {
+    closeTimerOverlay();
+  }
+  updateGenerateRoundButton();
 }
 
 function updateTimerStatus() {
@@ -549,6 +579,7 @@ function startCountdownPhase() {
     startRoundTimer();
     return;
   }
+  roundTimerWasStarted = true;
   setTimerMode("countdown");
   countdownInterval = setInterval(() => {
     countdownSecondsRemaining--;
@@ -563,6 +594,7 @@ function startCountdownPhase() {
 function startRoundTimer() {
   clearCountdown();
   clearRoundTimer();
+  roundTimerWasStarted = true;
   setTimerMode("running");
   roundInterval = setInterval(() => {
     roundSecondsRemaining = Math.max(0, roundSecondsRemaining - 1);
@@ -656,6 +688,10 @@ $("startRound").onclick = () => {
     return;
   }
 
+  if (currentRoundResult && !roundTimerWasStarted) {
+    scrubCurrentRound();
+  }
+
   stateBeforeCurrentRound = state ? JSON.parse(JSON.stringify(state)) : null;
   const res = ROUNDROBIN.generateRound(active, courts, state, { maxRetries: 900 });
 
@@ -670,6 +706,7 @@ $("startRound").onclick = () => {
   renderRound(res);
 
   roundSecondsRemaining = getRoundMinutes() * 60;
+  roundTimerWasStarted = false;
   setTimerMode("idle");
 };
 
@@ -683,6 +720,7 @@ $("reset").onclick = () => {
   currentRoundResult = null;
   currentRoundDecisions = {};
   stateBeforeCurrentRound = null;
+  roundTimerWasStarted = false;
   const minEl = $("minutes");
   const courtEl = $("courts");
   const countdownEl = $("startCountdown");
@@ -700,6 +738,7 @@ $("reset").onclick = () => {
   roundSecondsRemaining = 11 * 60;
   timerReset();
   closeTimerOverlay();
+  updateGenerateRoundButton();
 };
 
 $("timerStart").onclick = timerStart;
@@ -770,3 +809,4 @@ renderPlayers();
 renderLeaderboard();
 renderByes();
 updateRoundHeader(currentRoundResult ? currentRoundResult.round : null);
+updateGenerateRoundButton();
