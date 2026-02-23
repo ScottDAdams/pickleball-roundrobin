@@ -502,12 +502,44 @@ function getWinnerWithTieBreaker() {
       }
     }
   }
-  const rationale =
-    rationaleParts.length > 0
-      ? "Tie-breaker (head-to-head when they played each other): " +
-        rationaleParts.join(". ") + "."
-      : null;
-  return { winnerName, rationale };
+  const tiedNames = tied.map((t) => t.name).join(", ");
+  const headToHeadScores = tied.map((t) => {
+    const score = tied
+      .filter((o) => o.pid !== t.pid)
+      .reduce((sum, o) => sum + ((headToHead[t.pid] && headToHead[t.pid][o.pid]) || 0), 0);
+    const opponents = tied.filter((o) => o.pid !== t.pid);
+    const vs = opponents
+      .map((o) => {
+        const h = getHeadToHead(t.pid, o.pid);
+        if (h.aVsB === 0 && h.bVsA === 0) return null;
+        return `${o.name} ${h.aVsB}–${h.bVsA}`;
+      })
+      .filter(Boolean);
+    return { name: t.name, score, vs };
+  });
+  let rationale =
+    tied.length > 1
+      ? `${tiedNames} were tied at ${maxWins} wins. `
+      : "";
+  if (rationaleParts.length > 0) {
+    rationale += "Head-to-head when they played each other: " + rationaleParts.join(". ") + ". ";
+  }
+  if (tied.length > 1) {
+    headToHeadScores.forEach(({ name, score, vs }) => {
+      if (vs.length > 0) {
+        rationale += `${name}: ${vs.join(", ")} (${score} H2H win${score !== 1 ? "s" : ""}). `;
+      } else {
+        rationale += `${name}: no head-to-head games with other tied players. `;
+      }
+    });
+    rationale += `${winnerName} wins with the most head-to-head wins among the tied players.`;
+  }
+  rationale =
+    rationale.trim() ||
+    (tied.length > 1
+      ? `Tie broken by name order among ${tiedNames}.`
+      : null);
+  return { winnerName, rationale: rationale || null };
 }
 
 function openCelebration(winnerName, rationale) {
