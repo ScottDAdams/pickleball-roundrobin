@@ -319,6 +319,7 @@ function renderRound(res) {
       const locked = !!decided;
       const win1 = decided && decided.winner === 1;
       const win2 = decided && decided.winner === 2;
+      const winnerText = decided ? (decided.winner === 1 ? m.team1 : m.team2) : "";
       return `
         <div class="court-card ${locked ? "locked" : ""}" data-idx="${idx}">
           <div class="court-label">Court ${m.court}</div>
@@ -328,10 +329,10 @@ function renderRound(res) {
             <div class="court-team">${escapeHtml(m.team2)}</div>
           </div>
           <div class="court-actions">
-            <button type="button" class="court-btn-win ${win1 ? "win" : ""} ${win2 ? "lose" : ""}" data-win="1" ${locked ? "disabled" : ""}>Team 1 Won</button>
-            <button type="button" class="court-btn-win ${win2 ? "win" : ""} ${win1 ? "lose" : ""}" data-win="2" ${locked ? "disabled" : ""}>Team 2 Won</button>
+            <button type="button" class="court-btn-win ${win1 ? "win" : ""} ${win2 ? "lose" : ""}" data-win="1" ${locked ? "disabled" : ""}>${escapeHtml(m.team1)}</button>
+            <button type="button" class="court-btn-win ${win2 ? "win" : ""} ${win1 ? "lose" : ""}" data-win="2" ${locked ? "disabled" : ""}>${escapeHtml(m.team2)}</button>
           </div>
-          <div class="court-recorded">Result recorded</div>
+          <div class="court-recorded">${winnerText ? escapeHtml(winnerText) + " won" : ""}</div>
           <button type="button" class="court-undo" data-idx="${idx}">Undo</button>
         </div>
       `;
@@ -384,6 +385,8 @@ function recordWinner(matchIdx, win) {
   const card = $("matches").querySelector(`.court-card[data-idx="${matchIdx}"]`);
   if (card) {
     card.classList.add("locked");
+    const recordedEl = card.querySelector(".court-recorded");
+    if (recordedEl) recordedEl.textContent = (win === 1 ? match.team1 : match.team2) + " won";
     const btn1 = card.querySelector('.court-btn-win[data-win="1"]');
     const btn2 = card.querySelector('.court-btn-win[data-win="2"]');
     if (btn1) {
@@ -434,6 +437,8 @@ function undoCourt(matchIdx) {
   const card = $("matches").querySelector(`.court-card[data-idx="${matchIdx}"]`);
   if (card) {
     card.classList.remove("locked");
+    const recordedEl = card.querySelector(".court-recorded");
+    if (recordedEl) recordedEl.textContent = "";
     const btn1 = card.querySelector('.court-btn-win[data-win="1"]');
     const btn2 = card.querySelector('.court-btn-win[data-win="2"]');
     if (btn1) {
