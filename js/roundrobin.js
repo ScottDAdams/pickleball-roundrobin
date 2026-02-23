@@ -73,10 +73,15 @@
 
   // Fair bye selection: always choose from the minimum byeCount bucket
   // which enforces "no second bye until all have first", etc.
+  // Also assigns one bye when under capacity but player count is odd (so we can pair everyone).
   function pickByesFair(players, capacity, state) {
-    if (players.length <= capacity) return { active: players, byes: [] };
-
-    const byesNeeded = players.length - capacity;
+    let byesNeeded = 0;
+    if (players.length > capacity) {
+      byesNeeded = players.length - capacity;
+    } else if (players.length % 2 !== 0) {
+      byesNeeded = 1;
+    }
+    if (byesNeeded === 0) return { active: players, byes: [] };
 
     // sort candidates by byeCounts asc, and random tie-break
     const counts = players.map((p) => ({
