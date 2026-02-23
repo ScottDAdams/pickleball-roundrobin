@@ -7,6 +7,7 @@ let players = [];
 let scores = {};
 let currentRoundResult = null; // last res from generateRound for round # and bench
 let currentRoundDecisions = {}; // { matchIdx: { winnerIds, loserIds } } for undo
+let stateBeforeCurrentRound = null; // state snapshot before last generateRound (for scrub)
 
 const STORAGE_KEYS = {
   players: "rr_players",
@@ -155,7 +156,21 @@ function renderPlayers() {
         players[idx].isActive = !players[idx].isActive;
         if (!players[idx].isActive) players[idx].onBench = false;
       }
-      if (t === "bench") players[idx].onBench = !players[idx].onBench;
+      if (t === "bench") {
+        players[idx].onBench = !players[idx].onBench;
+        if (players[idx].onBench && currentRoundResult) {
+          const inRound = getPlayerIdsInCurrentRound().has(players[idx].id);
+          if (inRound) {
+            const hasResults = Object.keys(currentRoundDecisions).length > 0;
+            if (hasResults) {
+              alert("This player is in the current round and results have already been recorded. Can't scrub this round.");
+            } else {
+              alert("That player is in the current round. The round will be scrubbed (not counted) so you can generate a new round with them on the bench.");
+              scrubCurrentRound();
+            }
+          }
+        }
+      }
       if (t === "remove") players.splice(idx, 1);
       savePlayers();
       renderPlayers();
@@ -211,6 +226,31 @@ function renderLeaderboard() {
   `;
     })
     .join("");
+}
+
+// ——— Current round scrub (bench a player who is in the round) ———
+function getPlayerIdsInCurrentRound() {
+  if (!currentRoundResult) return new Set();
+  const ids = new Set();
+  (currentRoundResult.assignments || []).forEach((a) => {
+    (a.team1Ids || []).forEach((id) => ids.add(id));
+    (a.team2Ids || []).forEach((id) => ids.add(id));
+  });
+  (currentRoundResult.byePlayers || []).forEach((p) => ids.add(p.id));
+  return ids;
+}
+
+function scrubCurrentRound() {
+  state = stateBeforeCurrentRound;
+  currentRoundResult = null;
+  currentRoundDecisions = {};
+  const matchesEl = $("matches");
+  if (matchesEl) matchesEl.innerHTML = "";
+  renderByes();
+  updateRoundHeader(state && state.round != null ? state.round : null);
+  const diag = $("diagnostics");
+  if (diag) diag.textContent = "";
+  saveState();
 }
 
 // ——— Bench (pill chips) + Sitting out ———
@@ -611,6 +651,7 @@ $("startRound").onclick = () => {
     return;
   }
 
+  stateBeforeCurrentRound = state ? JSON.parse(JSON.stringify(state)) : null;
   const res = ROUNDROBIN.generateRound(active, courts, state, { maxRetries: 900 });
 
   if (res.impossible) {
@@ -636,6 +677,7 @@ $("reset").onclick = () => {
   scores = {};
   currentRoundResult = null;
   currentRoundDecisions = {};
+  stateBeforeCurrentRound = null;
   const minEl = $("minutes");
   const courtEl = $("courts");
   const countdownEl = $("startCountdown");
