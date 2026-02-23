@@ -20,6 +20,19 @@ const STORAGE_KEYS = {
   format: "rr_format",
 };
 
+const FORMAT_DESCRIPTIONS = {
+  random:
+    "Players are randomly paired and matched each round, with the system minimizing repeat partners and matchups. Best for social play and maximizing variety.",
+  throne:
+    "Winners move up a court and losers move down each round, while partners reshuffle every game. The top court becomes the proving ground — stay hot to hold the throne.",
+  upDownRiver:
+    "Winning pairs move up one court and losing pairs move down, with limited swapping to reduce chaos and court traffic. Keeps competition flowing while minimizing disruption.",
+  gauntlet:
+    "Players are grouped by performance so winners increasingly face stronger opponents. Balanced team pairings keep matches competitive as the field naturally separates by skill.",
+  cream:
+    "Standings gradually sort players by performance, with stronger players rising to higher courts over time. Movement is performance-driven but smoother and less abrupt than strict up/down formats.",
+};
+
 function uid(name) {
   return name.trim().toLowerCase().replace(/\s+/g, "_");
 }
@@ -66,6 +79,7 @@ function loadState() {
     const formatEl = $("formatSelect");
     if (formatEl && fmt) formatEl.value = fmt;
   } catch (_) {}
+  updateFormatDescription();
 }
 
 function savePlayers() {
@@ -113,6 +127,14 @@ function saveFormat() {
     const formatEl = $("formatSelect");
     if (formatEl) localStorage.setItem(STORAGE_KEYS.format, formatEl.value);
   } catch (_) {}
+}
+
+function updateFormatDescription() {
+  const sel = $("formatSelect");
+  const descEl = $("formatDescription");
+  if (!sel || !descEl) return;
+  const value = sel.value || "random";
+  descEl.textContent = FORMAT_DESCRIPTIONS[value] || FORMAT_DESCRIPTIONS.random;
 }
 
 // ——— Settings collapsible ———
@@ -1004,7 +1026,7 @@ const formatEl = $("formatSelect");
 if (minEl) minEl.addEventListener("change", saveSettings);
 if (courtEl) courtEl.addEventListener("change", saveSettings);
 if (startCountdownEl) startCountdownEl.addEventListener("change", saveSettings);
-if (formatEl) formatEl.addEventListener("change", saveFormat);
+if (formatEl) formatEl.addEventListener("change", () => { saveFormat(); updateFormatDescription(); });
 
 // ——— Init ———
 loadState();

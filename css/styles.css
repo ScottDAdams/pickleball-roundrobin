@@ -326,6 +326,19 @@ body {
   color: var(--muted);
 }
 
+.format-description {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+  background: rgba(0, 12, 24, 0.4);
+  border-radius: 8px;
+  border-left: 3px solid rgba(0, 212, 255, 0.3);
+  width: 100%;
+  flex: 1 1 100%;
+}
+
 .settings-panel input {
   width: 60px;
   padding: 6px 10px;
