@@ -576,12 +576,17 @@ function startRoundTimer() {
 }
 
 function timerStart() {
+  openTimerOverlay();
   if (timerMode === "countdown") {
     clearCountdown();
     startRoundTimer();
     return;
   }
-  if (timerMode === "idle" || timerMode === "paused" || timerMode === "stopped") {
+  if (timerMode === "idle") {
+    startCountdownPhase();
+    return;
+  }
+  if (timerMode === "paused" || timerMode === "stopped") {
     startRoundTimer();
   }
 }
@@ -665,7 +670,7 @@ $("startRound").onclick = () => {
   renderRound(res);
 
   roundSecondsRemaining = getRoundMinutes() * 60;
-  startCountdownPhase();
+  setTimerMode("idle");
 };
 
 $("reset").onclick = () => {
