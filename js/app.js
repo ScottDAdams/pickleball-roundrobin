@@ -43,8 +43,10 @@ function loadState() {
       const o = JSON.parse(set);
       const minEl = $("minutes");
       const courtEl = $("courts");
+      const countdownEl = $("startCountdown");
       if (minEl && o.minutes != null) minEl.value = o.minutes;
       if (courtEl && o.courts != null) courtEl.value = o.courts;
+      if (countdownEl && o.startCountdown != null) countdownEl.value = o.startCountdown;
     }
   } catch (_) {}
 }
@@ -71,11 +73,13 @@ function saveSettings() {
   try {
     const minEl = $("minutes");
     const courtEl = $("courts");
+    const countdownEl = $("startCountdown");
     localStorage.setItem(
       STORAGE_KEYS.settings,
       JSON.stringify({
         minutes: minEl ? Number(minEl.value) || 11 : 11,
         courts: courtEl ? Number(courtEl.value) || 6 : 6,
+        startCountdown: countdownEl ? Number(countdownEl.value) || 30 : 30,
       })
     );
   } catch (_) {}
@@ -345,44 +349,171 @@ function undoCourt(matchIdx) {
   renderLeaderboard();
 }
 
-// ——— Timer ———
-let timerSeconds = 0;
-let timerInterval = null;
+// ——— Timer state machine ———
+// timerMode: "idle" | "countdown" | "running" | "paused" | "stopped"
+let timerMode = "idle";
+let countdownSecondsRemaining = 0;
+let roundSecondsRemaining = 11 * 60;
+let countdownInterval = null;
+let roundInterval = null;
 
-function setTimerFromMinutes() {
+const DANGER_THRESHOLD_SEC = 90;
+
+function getRoundMinutes() {
   const minEl = $("minutes");
-  timerSeconds = (minEl ? Number(minEl.value) || 11 : 11) * 60;
-  renderTimer();
+  return minEl ? Number(minEl.value) || 11 : 11;
+}
+
+function getStartCountdown() {
+  const el = $("startCountdown");
+  return el ? Math.max(0, Number(el.value) || 30) : 30;
+}
+
+function clearCountdown() {
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+  countdownSecondsRemaining = 0;
+  const countdownEl = $("countdownDisplay");
+  if (countdownEl) countdownEl.textContent = "";
+}
+
+function clearRoundTimer() {
+  if (roundInterval) {
+    clearInterval(roundInterval);
+    roundInterval = null;
+  }
+}
+
+function setTimerMode(mode) {
+  timerMode = mode;
+  updateTimerDisplay();
+  updateTimerButtonStates();
+  updateTimerStatus();
+}
+
+function updateTimerStatus() {
+  const el = $("timerStatus");
+  if (!el) return;
+  if (timerMode === "stopped") {
+    el.textContent = "Round ended early";
+  } else {
+    el.textContent = "";
+  }
+}
+
+function updateTimerDisplay() {
+  const timerEl = $("timer");
+  const countdownEl = $("countdownDisplay");
+  if (!timerEl) return;
+
+  timerEl.classList.remove("running", "danger");
+  if (timerMode === "countdown") {
+    if (countdownEl) countdownEl.textContent = `Starting in ${countdownSecondsRemaining}…`;
+    const m = Math.floor(roundSecondsRemaining / 60);
+    const s = roundSecondsRemaining % 60;
+    timerEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    return;
+  }
+  if (countdownEl) countdownEl.textContent = "";
+
+  const m = Math.floor(roundSecondsRemaining / 60);
+  const s = roundSecondsRemaining % 60;
+  timerEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+
+  if (timerMode === "running") {
+    timerEl.classList.add("running");
+    if (roundSecondsRemaining <= DANGER_THRESHOLD_SEC) {
+      timerEl.classList.add("danger");
+    }
+  }
+}
+
+function updateTimerButtonStates() {
+  const startBtn = $("timerStart");
+  const pauseBtn = $("timerPause");
+  const stopBtn = $("timerStop");
+  const resetBtn = $("timerReset");
+  if (startBtn) startBtn.disabled = !(timerMode === "idle" || timerMode === "paused" || timerMode === "stopped" || timerMode === "countdown");
+  if (pauseBtn) pauseBtn.disabled = timerMode !== "running";
+  if (stopBtn) stopBtn.disabled = !(timerMode === "running" || timerMode === "countdown");
+  if (resetBtn) resetBtn.disabled = false;
 }
 
 function renderTimer() {
-  const m = Math.floor(timerSeconds / 60);
-  const s = timerSeconds % 60;
-  const el = $("timer");
-  if (el) el.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  updateTimerDisplay();
 }
 
-function timerStart() {
-  if (timerInterval) return;
-  timerInterval = setInterval(() => {
-    timerSeconds = Math.max(0, timerSeconds - 1);
-    renderTimer();
-    if (timerSeconds === 0) timerPause();
+function startCountdownPhase() {
+  clearRoundTimer();
+  countdownSecondsRemaining = getStartCountdown();
+  if (countdownSecondsRemaining <= 0) {
+    startRoundTimer();
+    return;
+  }
+  setTimerMode("countdown");
+  countdownInterval = setInterval(() => {
+    countdownSecondsRemaining--;
+    updateTimerDisplay();
+    if (countdownSecondsRemaining <= 0) {
+      clearCountdown();
+      startRoundTimer();
+    }
   }, 1000);
 }
 
+function startRoundTimer() {
+  clearCountdown();
+  clearRoundTimer();
+  setTimerMode("running");
+  roundInterval = setInterval(() => {
+    roundSecondsRemaining = Math.max(0, roundSecondsRemaining - 1);
+    updateTimerDisplay();
+    if (roundSecondsRemaining <= 0) {
+      clearRoundTimer();
+      setTimerMode("stopped");
+      updateTimerStatus();
+    }
+  }, 1000);
+}
+
+function timerStart() {
+  if (timerMode === "countdown") {
+    clearCountdown();
+    startRoundTimer();
+    return;
+  }
+  if (timerMode === "idle" || timerMode === "paused" || timerMode === "stopped") {
+    startRoundTimer();
+  }
+}
+
 function timerPause() {
-  if (timerInterval) clearInterval(timerInterval);
-  timerInterval = null;
+  if (timerMode !== "running") return;
+  clearRoundTimer();
+  setTimerMode("paused");
+}
+
+function timerStop() {
+  if (timerMode !== "running" && timerMode !== "countdown") return;
+  clearCountdown();
+  clearRoundTimer();
+  setTimerMode("stopped");
+  updateTimerStatus();
 }
 
 function timerReset() {
-  timerPause();
-  setTimerFromMinutes();
+  clearCountdown();
+  clearRoundTimer();
+  roundSecondsRemaining = getRoundMinutes() * 60;
+  setTimerMode("idle");
+  updateTimerStatus();
+  saveSettings();
 }
 
 // ——— Events ———
-$("addPlayer").onclick = () => {
+function doAddPlayer() {
   const name = $("playerName").value.trim();
   if (!name) return;
   const id = uid(name);
@@ -397,7 +528,21 @@ $("addPlayer").onclick = () => {
   saveScores();
   renderPlayers();
   renderLeaderboard();
-};
+  const input = $("playerName");
+  if (input) input.focus();
+}
+
+$("addPlayer").onclick = doAddPlayer;
+
+const playerNameInput = $("playerName");
+if (playerNameInput) {
+  playerNameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      doAddPlayer();
+    }
+  });
+}
 
 $("startRound").onclick = () => {
   const active = players.filter((p) => p.isActive);
@@ -420,7 +565,9 @@ $("startRound").onclick = () => {
   saveState();
   saveSettings();
   renderRound(res);
-  timerReset();
+
+  roundSecondsRemaining = getRoundMinutes() * 60;
+  startCountdownPhase();
 };
 
 $("reset").onclick = () => {
@@ -446,21 +593,24 @@ $("reset").onclick = () => {
 
 $("timerStart").onclick = timerStart;
 $("timerPause").onclick = timerPause;
+$("timerStop").onclick = timerStop;
 $("timerReset").onclick = () => {
   timerReset();
-  saveSettings();
 };
 
 // Persist settings when inputs change
 const minEl = $("minutes");
 const courtEl = $("courts");
+const startCountdownEl = $("startCountdown");
 if (minEl) minEl.addEventListener("change", saveSettings);
 if (courtEl) courtEl.addEventListener("change", saveSettings);
+if (startCountdownEl) startCountdownEl.addEventListener("change", saveSettings);
 
 // ——— Init ———
 loadState();
 initSettingsToggle();
-setTimerFromMinutes();
+roundSecondsRemaining = getRoundMinutes() * 60;
+setTimerMode("idle");
 renderPlayers();
 renderLeaderboard();
 renderByes();

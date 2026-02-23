@@ -143,6 +143,41 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.timer-display.running {
+  font-size: clamp(56px, 10vw, 80px);
+  font-weight: 800;
+}
+
+.timer-display.danger {
+  color: #dc2626;
+}
+
+.countdown-display {
+  font-size: clamp(24px, 4vw, 32px);
+  font-weight: 600;
+  color: var(--muted-text);
+  margin: -8px 0 8px;
+  min-height: 1.2em;
+}
+
+.timer-status {
+  font-size: 13px;
+  color: var(--muted-text);
+  margin-bottom: 8px;
+  min-height: 1.2em;
+}
+
+.btn-pill.stop {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 2px solid #fecaca;
+}
+
+.btn-pill.stop:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
 .timer-actions {
   display: flex;
   gap: 12px;

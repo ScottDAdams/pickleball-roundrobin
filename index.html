@@ -23,11 +23,14 @@
       <!-- B) Hero timer panel -->
       <section class="hero-timer">
         <div class="timer-display" id="timer">11:00</div>
+        <div id="countdownDisplay" class="countdown-display" aria-live="polite"></div>
         <div class="timer-actions">
           <button id="timerStart" class="btn btn-pill start">Start</button>
           <button id="timerPause" class="btn btn-pill pause">Pause</button>
+          <button id="timerStop" class="btn btn-pill stop">Stop</button>
           <button id="timerReset" class="btn btn-secondary">Reset Timer</button>
         </div>
+        <div id="timerStatus" class="timer-status"></div>
         <button type="button" id="settingsToggle" class="settings-toggle" aria-expanded="false">⚙ Settings</button>
         <div id="settingsPanel" class="settings-panel" aria-hidden="true">
           <label>
@@ -37,6 +40,10 @@
           <label>
             Courts
             <input id="courts" type="number" min="1" max="6" value="6" />
+          </label>
+          <label>
+            Start countdown (sec)
+            <input id="startCountdown" type="number" min="0" max="120" value="30" />
           </label>
         </div>
         <div id="diagnostics" class="diagnostics"></div>
