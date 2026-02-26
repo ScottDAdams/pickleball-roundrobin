@@ -311,26 +311,23 @@ function renderByes() {
   const el = $("byes");
   if (!el) return;
   const byes = currentRoundResult ? currentRoundResult.byePlayers || [] : [];
-  if (byes.length === 0) {
+  const sitting = players.filter((p) => p.isActive && p.onBench);
+  const totalNotPlaying = byes.length + sitting.length;
+
+  if (totalNotPlaying === 0) {
     el.innerHTML = `<span class="bench-empty">No byes this round.</span>`;
   } else {
-    el.innerHTML = byes
-      .map((p) => `<span class="bench-pill">${escapeHtml(p.name)}</span>`)
-      .join("");
+    const byePills = byes.map((p) => `<span class="bench-pill">${escapeHtml(p.name)}</span>`).join("");
+    const sittingPills = sitting.map((p) => `<span class="bench-pill bench-pill-sitting">${escapeHtml(p.name)}</span>`).join("");
+    el.innerHTML =
+      `<span class="bench-total">Not playing this round (${totalNotPlaying}):</span> ` +
+      byePills + (sittingPills ? " " + sittingPills : "");
   }
 
   const sittingEl = $("sittingOut");
   if (!sittingEl) return;
-  const sitting = players.filter((p) => p.isActive && p.onBench);
-  if (sitting.length === 0) {
-    sittingEl.innerHTML = "";
-    sittingEl.classList.remove("has-content");
-  } else {
-    sittingEl.classList.add("has-content");
-    sittingEl.innerHTML =
-      `<span class="bench-sitting-label">Sitting out:</span> ` +
-      sitting.map((p) => `<span class="bench-pill bench-pill-sitting">${escapeHtml(p.name)}</span>`).join("");
-  }
+  sittingEl.innerHTML = "";
+  sittingEl.classList.remove("has-content");
 }
 
 // ——— Court cards: win/lose/lock + undo ———

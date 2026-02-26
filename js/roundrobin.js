@@ -625,6 +625,17 @@
     const result = modeFn(active, courtCount, state, optsArg);
     if (result.impossible) return result;
 
+    const assignedIds = new Set();
+    (result.assignments || []).forEach((a) => {
+      (a.team1Ids || []).forEach((id) => assignedIds.add(id));
+      (a.team2Ids || []).forEach((id) => assignedIds.add(id));
+    });
+    const leftoverByes = active.filter((p) => !assignedIds.has(p.id));
+    leftoverByes.forEach((p) => {
+      state.byeCounts[p.id] = (state.byeCounts[p.id] || 0) + 1;
+    });
+    const allByes = byes.length > 0 || leftoverByes.length > 0 ? [...byes, ...leftoverByes] : byes;
+
     state.round = (state.round || 0) + 1;
     state.lastRound = { courtCount, assignments: result.assignments };
 
@@ -634,7 +645,7 @@
       capacity,
       playersTotal: deduped.length,
       activePlayers: active,
-      byePlayers: byes,
+      byePlayers: allByes,
       assignments: result.assignments,
       diagnostics: result.diagnostics || {},
       state,
