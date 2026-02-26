@@ -1,39 +1,41 @@
-/* THE FARMERS – cosmic neon theme (poster-aligned: sunburst + deep cosmic) */
+/* THE FARMERS – vibrant cosmic theme (poster: sunburst + saturated color) */
 
 :root {
-  /* Core palette – poster: warm sun / cool cosmic */
-  --bg0: #060510;
-  --bg1: #0a0618;
-  --card: rgba(12, 8, 22, 0.78);
-  --text: #f5f0fc;
-  --muted: #b8a8d0;
+  /* Core palette – vibrant poster colors */
+  --bg0: #0d0818;
+  --bg1: #120c1c;
+  --card: rgba(22, 14, 36, 0.75);
+  --card-warm: rgba(28, 16, 24, 0.72);
+  --text: #f8f4fc;
+  --muted: #c4b8e0;
   --accentHot: #e85c0e;
   --accentHotLight: #ffb020;
   --accentSun: #ffd54a;
   --accentCool: #5c9eff;
   --accentCoolLight: #8ec5ff;
   --accentPurple: #a855f7;
+  --accentGreen: #4ade80;
   --danger: #ff3b7a;
   --good: #22c55e;
 
-  /* Glows – poster-style warm radiance + cool streaks */
-  --glow-hot: 0 0 24px rgba(232, 92, 14, 0.35), 0 0 48px rgba(255, 176, 32, 0.18);
-  --glow-hot-strong: 0 0 32px rgba(232, 92, 14, 0.45), 0 0 56px rgba(255, 176, 32, 0.25);
-  --glow-cool: 0 0 20px rgba(92, 158, 255, 0.25), 0 0 12px rgba(168, 85, 247, 0.15);
-  --glow-good: 0 0 18px rgba(34, 197, 94, 0.35);
-  --glow-danger: 0 0 22px rgba(255, 59, 122, 0.4);
+  /* Glows – stronger, more visible */
+  --glow-hot: 0 0 28px rgba(232, 92, 14, 0.45), 0 0 56px rgba(255, 176, 32, 0.22);
+  --glow-hot-strong: 0 0 36px rgba(232, 92, 14, 0.55), 0 0 64px rgba(255, 176, 32, 0.3);
+  --glow-cool: 0 0 24px rgba(92, 158, 255, 0.35), 0 0 16px rgba(168, 85, 247, 0.2);
+  --glow-good: 0 0 22px rgba(34, 197, 94, 0.45);
+  --glow-danger: 0 0 24px rgba(255, 59, 122, 0.45);
 
   --card-radius: 16px;
   --card-padding: 20px;
-  --border-glow: 1px solid rgba(92, 158, 255, 0.2);
-  --border-glow-hot: 1px solid rgba(255, 176, 32, 0.35);
+  --border-glow: 1px solid rgba(92, 158, 255, 0.28);
+  --border-glow-hot: 1px solid rgba(255, 176, 32, 0.5);
 }
 
 * {
   box-sizing: border-box;
 }
 
-/* —— Cosmic background: deep space + starfield (poster vibe) —— */
+/* —— Vibrant cosmic background: strong sunburst + colored sky —— */
 body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   margin: 0;
@@ -41,14 +43,17 @@ body {
   min-height: 100vh;
   background: var(--bg0);
   background-image:
-    radial-gradient(ellipse 140% 90% at 50% 0%, rgba(232, 92, 14, 0.12) 0%, rgba(255, 176, 32, 0.05) 30%, transparent 55%),
-    radial-gradient(ellipse 100% 60% at 50% 100%, rgba(92, 158, 255, 0.06) 0%, rgba(168, 85, 247, 0.04) 40%, transparent 70%),
-    radial-gradient(1.5px 1.5px at 18% 22%, rgba(255, 213, 74, 0.5), transparent),
-    radial-gradient(1px 1px at 82% 18%, rgba(255, 176, 32, 0.4), transparent),
-    radial-gradient(1px 1px at 65% 55%, rgba(255, 255, 255, 0.35), transparent),
-    radial-gradient(1.5px 1.5px at 25% 68%, rgba(142, 197, 255, 0.35), transparent),
-    radial-gradient(1px 1px at 50% 88%, rgba(255, 213, 74, 0.3), transparent),
-    radial-gradient(1px 1px at 88% 48%, rgba(168, 85, 247, 0.25), transparent);
+    radial-gradient(ellipse 160% 100% at 50% -10%, rgba(255, 176, 32, 0.28) 0%, rgba(232, 92, 14, 0.15) 25%, rgba(255, 213, 74, 0.06) 45%, transparent 65%),
+    radial-gradient(ellipse 120% 70% at 50% 110%, rgba(92, 158, 255, 0.14) 0%, rgba(168, 85, 247, 0.1) 35%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 80% 20%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 15% 80%, rgba(74, 222, 128, 0.06) 0%, transparent 45%),
+    radial-gradient(2px 2px at 20% 25%, rgba(255, 213, 74, 0.9), transparent),
+    radial-gradient(1.5px 1.5px at 75% 15%, rgba(255, 176, 32, 0.85), transparent),
+    radial-gradient(1.5px 1.5px at 60% 50%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(2px 2px at 30% 70%, rgba(142, 197, 255, 0.8), transparent),
+    radial-gradient(1.5px 1.5px at 85% 55%, rgba(168, 85, 247, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 45% 90%, rgba(255, 213, 74, 0.65), transparent),
+    radial-gradient(1px 1px at 92% 35%, rgba(255, 176, 32, 0.6), transparent);
   background-color: var(--bg1);
   color: var(--text);
 }
@@ -69,7 +74,8 @@ body {
   gap: 12px;
   padding: 12px 0;
   margin-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 176, 32, 0.15);
+  border-bottom: 2px solid rgba(255, 176, 32, 0.35);
+  box-shadow: 0 4px 20px rgba(255, 176, 32, 0.08);
 }
 
 .header-title {
@@ -78,6 +84,7 @@ body {
   margin: 0;
   color: var(--text);
   letter-spacing: 0.02em;
+  text-shadow: 0 0 20px rgba(255, 176, 32, 0.2);
 }
 
 .header-center {
@@ -89,7 +96,8 @@ body {
 .round-header {
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--accentHotLight);
+  text-shadow: 0 0 12px rgba(255, 176, 32, 0.2);
 }
 
 .header-actions {
@@ -103,22 +111,22 @@ body {
   background: var(--card);
   border-radius: var(--card-radius);
   padding: var(--card-padding);
-  border: 1px solid rgba(92, 158, 255, 0.15);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), var(--glow-cool);
+  border: 1px solid rgba(92, 158, 255, 0.25);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), var(--glow-cool), 0 0 40px rgba(168, 85, 247, 0.06);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* —— Hero timer: sunburst behind + glass (poster pickleball sun) —— */
+/* —— Hero timer: strong sunburst (poster pickleball sun) —— */
 .hero-timer {
   position: relative;
   border-radius: var(--card-radius);
   padding: var(--card-padding);
   margin-bottom: 20px;
   text-align: center;
-  background: var(--card);
-  border: 1px solid rgba(255, 176, 32, 0.2);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 48px rgba(232, 92, 14, 0.12);
+  background: var(--card-warm);
+  border: 2px solid rgba(255, 176, 32, 0.4);
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.35), 0 0 60px rgba(232, 92, 14, 0.2), 0 0 100px rgba(255, 176, 32, 0.1);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -126,13 +134,13 @@ body {
 .hero-timer::before {
   content: "";
   position: absolute;
-  inset: -20%;
+  inset: -25%;
   border-radius: 50%;
   background: radial-gradient(
-    ellipse 80% 80% at 50% 50%,
-    rgba(232, 92, 14, 0.22) 0%,
-    rgba(255, 176, 32, 0.1) 30%,
-    rgba(255, 213, 74, 0.04) 50%,
+    ellipse 85% 85% at 50% 45%,
+    rgba(255, 176, 32, 0.35) 0%,
+    rgba(232, 92, 14, 0.18) 25%,
+    rgba(255, 213, 74, 0.08) 45%,
     transparent 65%
   );
   pointer-events: none;
@@ -206,7 +214,7 @@ body {
   color: var(--muted);
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 176, 32, 0.18);
+  border-top: 1px solid rgba(255, 176, 32, 0.3);
 }
 
 /* —— Buttons —— */
@@ -292,30 +300,33 @@ body {
   margin-right: 8px;
   padding: 8px 16px;
   font-size: 13px;
-  background: rgba(255, 176, 32, 0.08);
-  border: 1px solid rgba(255, 176, 32, 0.3);
+  background: rgba(255, 176, 32, 0.15);
+  border: 1px solid rgba(255, 176, 32, 0.45);
   border-radius: 8px;
   cursor: pointer;
-  color: var(--muted);
+  color: var(--accentSun);
   display: inline-block;
+  box-shadow: 0 0 16px rgba(255, 176, 32, 0.12);
 }
 
 .settings-toggle:hover {
-  background: rgba(255, 176, 32, 0.14);
-  color: var(--accentHotLight);
-  border-color: rgba(255, 176, 32, 0.45);
+  background: rgba(255, 176, 32, 0.25);
+  color: var(--text);
+  border-color: rgba(255, 176, 32, 0.6);
+  box-shadow: 0 0 24px rgba(255, 176, 32, 0.2);
 }
 
 .settings-panel {
   display: none;
   margin-top: 12px;
   padding: 12px;
-  background: rgba(10, 6, 24, 0.6);
+  background: rgba(22, 12, 36, 0.85);
   border-radius: 10px;
   gap: 16px;
   flex-wrap: wrap;
   align-items: center;
-  border: 1px solid rgba(255, 176, 32, 0.15);
+  border: 2px solid rgba(255, 176, 32, 0.3);
+  box-shadow: 0 0 30px rgba(255, 176, 32, 0.1);
 }
 
 .settings-panel.open {
@@ -336,11 +347,12 @@ body {
   font-size: 13px;
   line-height: 1.45;
   color: var(--muted);
-  background: rgba(10, 6, 24, 0.5);
+  background: rgba(22, 12, 36, 0.7);
   border-radius: 8px;
-  border-left: 3px solid rgba(255, 176, 32, 0.45);
+  border-left: 4px solid rgba(255, 176, 32, 0.6);
   width: 100%;
   flex: 1 1 100%;
+  box-shadow: 0 0 16px rgba(255, 176, 32, 0.06);
 }
 
 .settings-panel input {
@@ -388,7 +400,8 @@ body {
 .courts-section-header .round-header {
   margin: 0;
   font-size: 1.1rem;
-  color: var(--muted);
+  color: var(--accentHotLight);
+  text-shadow: 0 0 12px rgba(255, 176, 32, 0.2);
 }
 
 .courts-grid {
@@ -397,14 +410,14 @@ body {
   gap: 16px;
 }
 
-/* Court card: glass + ring motif (poster warm/cool mix) */
+/* Court card: vibrant borders + warm/cool glow */
 .court-card {
   position: relative;
   background: var(--card);
   border-radius: var(--card-radius);
   padding: var(--card-padding);
-  border: 1px solid rgba(92, 158, 255, 0.14);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 24px rgba(232, 92, 14, 0.06);
+  border: 2px solid rgba(255, 176, 32, 0.25);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 32px rgba(232, 92, 14, 0.12), 0 0 20px rgba(92, 158, 255, 0.06);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   transition: box-shadow 0.2s;
@@ -416,12 +429,12 @@ body {
   position: absolute;
   inset: 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 176, 32, 0.12);
+  border: 1px solid rgba(255, 176, 32, 0.2);
   pointer-events: none;
 }
 
 .court-card:hover {
-  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.4), 0 0 28px rgba(92, 158, 255, 0.12), 0 0 16px rgba(232, 92, 14, 0.08);
+  box-shadow: 0 6px 32px rgba(0, 0, 0, 0.35), 0 0 40px rgba(92, 158, 255, 0.15), 0 0 28px rgba(232, 92, 14, 0.15);
 }
 
 .court-card.locked {
@@ -434,8 +447,9 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--muted);
+  color: var(--accentHotLight);
   margin-bottom: 12px;
+  text-shadow: 0 0 12px rgba(255, 176, 32, 0.3);
 }
 
 .court-teams {
@@ -543,8 +557,8 @@ body {
   background: var(--card);
   border-radius: var(--card-radius);
   padding: var(--card-padding);
-  border: 1px solid rgba(92, 158, 255, 0.12);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 20px rgba(232, 92, 14, 0.06);
+  border: 2px solid rgba(255, 176, 32, 0.22);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 36px rgba(232, 92, 14, 0.1), 0 0 24px rgba(168, 85, 247, 0.06);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -553,7 +567,8 @@ body {
   margin: 0 0 12px;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--text);
+  color: var(--accentHotLight);
+  text-shadow: 0 0 16px rgba(255, 176, 32, 0.25);
 }
 
 /* Bench pills */
@@ -568,11 +583,12 @@ body {
   display: inline-block;
   padding: 6px 14px;
   border-radius: 999px;
-  background: rgba(255, 176, 32, 0.12);
+  background: rgba(255, 176, 32, 0.2);
   font-size: 13px;
   font-weight: 500;
-  color: var(--accentHotLight);
-  border: 1px solid rgba(255, 176, 32, 0.3);
+  color: var(--accentSun);
+  border: 1px solid rgba(255, 176, 32, 0.45);
+  box-shadow: 0 0 12px rgba(255, 176, 32, 0.15);
 }
 
 .bench-empty {
@@ -597,9 +613,10 @@ body {
 }
 
 .bench-pill-sitting {
-  background: rgba(168, 85, 247, 0.15);
-  color: var(--accentPurple);
-  border-color: rgba(168, 85, 247, 0.35);
+  background: rgba(168, 85, 247, 0.25);
+  color: #d4a8ff;
+  border-color: rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.2);
 }
 
 /* Players */
@@ -669,8 +686,9 @@ body {
 }
 
 .player-badge.active {
-  background: rgba(34, 197, 94, 0.2);
-  color: var(--good);
+  background: rgba(74, 222, 128, 0.3);
+  color: var(--accentGreen);
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.2);
 }
 
 .player-actions {
@@ -747,7 +765,9 @@ body {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: radial-gradient(ellipse 80% 80% at 50% 30%, rgba(10, 6, 24, 0.97) 0%, rgba(6, 5, 16, 0.98) 100%);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 15%, rgba(255, 176, 32, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 90% 90% at 50% 30%, rgba(18, 10, 28, 0.96) 0%, rgba(10, 6, 18, 0.98) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
