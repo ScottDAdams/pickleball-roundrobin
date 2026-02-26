@@ -35,12 +35,13 @@
   box-sizing: border-box;
 }
 
-/* —— Vibrant cosmic background: strong sunburst + colored sky —— */
+/* —— Vibrant cosmic background: poster (faded) + strong sunburst + colored sky —— */
 body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   margin: 0;
   padding: 16px;
   min-height: 100vh;
+  position: relative;
   background: var(--bg0);
   background-image:
     radial-gradient(ellipse 160% 100% at 50% -10%, rgba(255, 176, 32, 0.28) 0%, rgba(232, 92, 14, 0.15) 25%, rgba(255, 213, 74, 0.06) 45%, transparent 65%),
@@ -56,6 +57,16 @@ body {
     radial-gradient(1px 1px at 92% 35%, rgba(255, 176, 32, 0.6), transparent);
   background-color: var(--bg1);
   color: var(--text);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: url("../Farrmers-Pickleball-Poster.png") center center / cover no-repeat;
+  opacity: 0.2;
+  pointer-events: none;
 }
 
 .container {
