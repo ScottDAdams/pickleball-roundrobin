@@ -65,7 +65,7 @@ body::before {
   inset: 0;
   z-index: 0;
   background: url("../Farrmers-Pickleball-Poster.png") center center / cover no-repeat;
-  opacity: 0.2;
+  opacity: 0.28;
   pointer-events: none;
 }
 
