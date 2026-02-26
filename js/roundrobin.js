@@ -169,7 +169,23 @@
       }
     }
 
-    if (!best) return { impossible: true };
+    // Fallback: any valid pairing so add/drop/bench never breaks round generation
+    if (!best) {
+      const pool = shuffle(activePlayers);
+      const pairs = [];
+      for (let i = 0; i < pool.length; i += 2) {
+        pairs.push([pool[i], pool[i + 1]]);
+      }
+      let repeatCount = 0;
+      pairs.forEach((pr) => {
+        const k = pairKey(pr[0].id, pr[1].id);
+        if ((state.partnerHistory[k] || 0) > 0) repeatCount++;
+      });
+      return {
+        pairs,
+        repeatPartnershipsUsed: repeatCount,
+      };
+    }
 
     return {
       pairs: best.pairs,
@@ -251,7 +267,28 @@
       }
     }
 
-    if (!best) return { impossible: true };
+    // Fallback: take first courtCount disjoint matchups so add/drop/bench never breaks
+    if (!best) {
+      const teams = pairs.slice();
+      const matches = [];
+      for (let i = 0; i < courtCount && 2 * i + 1 < teams.length; i++) {
+        matches.push({
+          team1: teams[2 * i],
+          team2: teams[2 * i + 1],
+          team1Key: teamKeyFromPair(teams[2 * i]),
+          team2Key: teamKeyFromPair(teams[2 * i + 1]),
+          matchKey: matchKey(teamKeyFromPair(teams[2 * i]), teamKeyFromPair(teams[2 * i + 1])),
+        });
+      }
+      let repeatMatchups = 0;
+      matches.forEach((m) => {
+        if ((state.matchHistory[m.matchKey] || 0) > 0) repeatMatchups++;
+      });
+      return {
+        matches,
+        repeatMatchupsUsed: repeatMatchups,
+      };
+    }
 
     return {
       matches: best.matches,

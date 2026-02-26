@@ -424,15 +424,6 @@ body {
   overflow: hidden;
 }
 
-.court-card::before {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 176, 32, 0.2);
-  pointer-events: none;
-}
-
 .court-card:hover {
   box-shadow: 0 6px 32px rgba(0, 0, 0, 0.35), 0 0 40px rgba(92, 158, 255, 0.15), 0 0 28px rgba(232, 92, 14, 0.15);
 }
