@@ -119,7 +119,10 @@ function saveSettings() {
       JSON.stringify({
         minutes: minEl ? Number(minEl.value) || 11 : 11,
         courts: courtEl ? Number(courtEl.value) || 6 : 6,
-        startCountdown: countdownEl ? Number(countdownEl.value) || 30 : 30,
+        startCountdown: (() => {
+          const v = countdownEl ? Number(countdownEl.value) : NaN;
+          return isNaN(v) ? 30 : Math.max(0, v);
+        })(),
       })
     );
   } catch (_) {}
@@ -638,7 +641,8 @@ function getRoundMinutes() {
 
 function getStartCountdown() {
   const el = $("startCountdown");
-  return el ? Math.max(0, Number(el.value) || 30) : 30;
+  const v = el ? Number(el.value) : NaN;
+  return isNaN(v) ? 30 : Math.max(0, v);
 }
 
 function clearCountdown() {
