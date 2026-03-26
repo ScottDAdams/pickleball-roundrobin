@@ -211,18 +211,24 @@ function renderPlayers() {
         if (!players[idx].isActive) players[idx].onBench = false;
       }
       if (t === "bench") {
-        players[idx].onBench = !players[idx].onBench;
-        if (players[idx].onBench && currentRoundResult) {
+        const nextOnBench = !players[idx].onBench;
+        if (nextOnBench && currentRoundResult) {
           const inRound = getPlayerIdsInCurrentRound().has(players[idx].id);
           if (inRound) {
             const hasResults = Object.keys(currentRoundDecisions).length > 0;
             if (hasResults) {
-              alert("This player is in the current round and results have already been recorded. Can't scrub this round.");
+              alert("This player is in the current round and results have already been recorded. Can't bench until next round.");
             } else {
+              players[idx].onBench = true;
               alert("That player is in the current round. The round will be scrubbed (not counted) so you can generate a new round with them on the bench.");
               scrubCurrentRound();
             }
+          } else {
+            players[idx].onBench = true;
           }
+        } else {
+          // Back in (or benching while no current round)
+          players[idx].onBench = nextOnBench;
         }
       }
       if (t === "remove") players.splice(idx, 1);
@@ -314,7 +320,8 @@ function renderByes() {
   const el = $("byes");
   if (!el) return;
   const byes = currentRoundResult ? currentRoundResult.byePlayers || [] : [];
-  const sitting = players.filter((p) => p.isActive && p.onBench);
+  const inRoundIds = getPlayerIdsInCurrentRound();
+  const sitting = players.filter((p) => p.isActive && p.onBench && !inRoundIds.has(p.id));
   const totalNotPlaying = byes.length + sitting.length;
 
   if (totalNotPlaying === 0) {

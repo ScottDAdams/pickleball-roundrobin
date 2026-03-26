@@ -330,8 +330,9 @@
 
         // swap if it reduces stickiness
         if (!stickyIfSwap1 && !stickyIfSwap2) {
-          courts[i].m = entry2.m;
-          courts[j].m = entry.m;
+          const tmp = courts[i].m;
+          courts[i].m = courts[j].m;
+          courts[j].m = tmp;
           break;
         }
       }
